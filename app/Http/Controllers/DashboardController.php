@@ -14,45 +14,54 @@ class DashboardController extends Controller
     public function index()
     {
         // Get real statistics from database
-        $anggotaAktif = User::count(); // Users who are registered as members
-        $pengurus = SekarPengurus::count(); // Active board members
-        $anggotaKeluar = ExAnggota::count(); // Ex members
+        $anggotaAktif = User::count();
+        $pengurus = SekarPengurus::count();
+        $anggotaKeluar = ExAnggota::count();
         
-        // Calculate non-anggota (karyawan yang belum jadi anggota)
+        // Calculate non-anggota (employees who haven't registered as members)
         $totalKaryawan = Karyawan::count();
-        $nonAnggota = $totalKaryawan - $anggotaAktif;
+        $nonAnggota = max(0, $totalKaryawan - $anggotaAktif);
 
-        // Calculate real growth indicators based on recent data
-        // For demo purposes, using simple calculations - in real app would compare with previous periods
-        $growthData = [
-            'anggota_aktif_growth' => $anggotaAktif > 0 ? '+' . $anggotaAktif : '0',
-            'pengurus_growth' => $pengurus > 2 ? '+' . ($pengurus - 2) : '-' . (2 - $pengurus),
-            'anggota_keluar_growth' => $anggotaKeluar > 0 ? '+' . $anggotaKeluar : '0',
-            'non_anggota_growth' => $nonAnggota > 100 ? '+' . ($nonAnggota - 100) : '-' . (100 - $nonAnggota)
-        ];
-
-        // Get DPW mapping data with real calculations
+        // Get DPW mapping data with accurate joins
         $dpwMapping = DB::table('t_sekar_pengurus as sp')
-            ->leftJoin('users as u', 'sp.N_NIK', '=', 'u.nik')
-            ->leftJoin('t_karyawan as k', 'sp.N_NIK', '=', 'k.N_NIK')
-            ->leftJoin('t_ex_anggota as ex', 'sp.N_NIK', '=', 'ex.N_NIK')
+            ->join('t_karyawan as k', 'sp.N_NIK', '=', 'k.N_NIK')
             ->select(
-                DB::raw("COALESCE(NULLIF(sp.DPW, ''), 'DPW Jabar') as dpw"),
-                DB::raw("COALESCE(NULLIF(sp.DPD, ''), 'DPW Japati') as dpd"),
-                DB::raw('COUNT(DISTINCT CASE WHEN u.nik IS NOT NULL THEN u.nik END) as anggota_aktif'),
+                DB::raw("COALESCE(NULLIF(TRIM(sp.DPW), ''), 'DPW Jabar') as dpw"),
+                DB::raw("COALESCE(NULLIF(TRIM(sp.DPD), ''), 'DPD Bandung') as dpd"),
                 DB::raw('COUNT(DISTINCT sp.N_NIK) as pengurus'),
-                DB::raw('COUNT(DISTINCT ex.N_NIK) as anggota_keluar'),
-                DB::raw('COUNT(DISTINCT CASE WHEN u.nik IS NULL AND k.N_NIK IS NOT NULL THEN k.N_NIK END) as non_anggota')
+                // Count active members in this DPW/DPD
+                DB::raw('(SELECT COUNT(DISTINCT u.nik) 
+                         FROM users u 
+                         JOIN t_karyawan tk ON u.nik = tk.N_NIK 
+                         WHERE tk.V_KOTA_GEDUNG = k.V_KOTA_GEDUNG) as anggota_aktif'),
+                // Count ex-members in this DPW/DPD  
+                DB::raw('(SELECT COUNT(DISTINCT ex.N_NIK) 
+                         FROM t_ex_anggota ex 
+                         WHERE ex.V_KOTA_GEDUNG = k.V_KOTA_GEDUNG) as anggota_keluar'),
+                // Count non-members in this area
+                DB::raw('(SELECT COUNT(DISTINCT tk2.N_NIK) 
+                         FROM t_karyawan tk2 
+                         LEFT JOIN users u2 ON tk2.N_NIK = u2.nik 
+                         WHERE tk2.V_KOTA_GEDUNG = k.V_KOTA_GEDUNG 
+                         AND u2.nik IS NULL) as non_anggota')
             )
-            ->groupBy('sp.DPW', 'sp.DPD')
+            ->groupBy('sp.DPW', 'sp.DPD', 'k.V_KOTA_GEDUNG')
+            ->orderBy('dpw')
+            ->orderBy('dpd')
             ->get();
 
-        // If no pengurus data, create default entry with real data
+        // If no pengurus data exists, create a default entry based on existing data
         if ($dpwMapping->isEmpty()) {
+            $defaultCity = Karyawan::select('V_KOTA_GEDUNG')
+                ->whereNotNull('V_KOTA_GEDUNG')
+                ->first();
+            
+            $cityName = $defaultCity ? $defaultCity->V_KOTA_GEDUNG : 'BANDUNG';
+            
             $dpwMapping = collect([
                 (object)[
                     'dpw' => 'DPW Jabar',
-                    'dpd' => 'DPW Japati',
+                    'dpd' => 'DPD ' . ucfirst(strtolower($cityName)),
                     'anggota_aktif' => $anggotaAktif,
                     'pengurus' => $pengurus,
                     'anggota_keluar' => $anggotaKeluar,
@@ -60,6 +69,14 @@ class DashboardController extends Controller
                 ]
             ]);
         }
+
+        // Calculate growth indicators (simplified for now)
+        $growthData = [
+            'anggota_aktif_growth' => $anggotaAktif > 0 ? '+' . $anggotaAktif : '0',
+            'pengurus_growth' => $pengurus > 0 ? '+' . $pengurus : '0', 
+            'anggota_keluar_growth' => $anggotaKeluar > 0 ? '+' . $anggotaKeluar : '0',
+            'non_anggota_growth' => $nonAnggota > 0 ? ($nonAnggota > 50 ? '+' . ($nonAnggota - 50) : '0') : '0'
+        ];
 
         return view('dashboard', compact(
             'anggotaAktif',
