@@ -4,6 +4,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\KonsultasiController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
@@ -24,4 +25,11 @@ Route::middleware('auth')->group(function () {
     // Profile Routes
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::post('/profile/update-iuran', [ProfileController::class, 'updateIuranSukarela'])->name('profile.update-iuran');
+    
+    // Konsultasi Routes
+    Route::get('/konsultasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
+    Route::get('/konsultasi/create', [KonsultasiController::class, 'create'])->name('konsultasi.create');
+    Route::post('/konsultasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
+    Route::get('/konsultasi/{id}', [KonsultasiController::class, 'show'])->name('konsultasi.show');
+    Route::post('/konsultasi/{id}/comment', [KonsultasiController::class, 'addComment'])->name('konsultasi.comment');
 });
