@@ -89,7 +89,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-600 text-xs font-medium">Pengurus</p>
-                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($pengurus) }}</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($totalPengurus) }}</p>
                         </div>
                         <div class="bg-{{ str_starts_with($growthData['pengurus_growth'], '+') ? 'green' : 'red' }}-100 text-{{ str_starts_with($growthData['pengurus_growth'], '+') ? 'green' : 'red' }}-700 px-2 py-1 rounded text-xs font-medium">
                             {{ $growthData['pengurus_growth'] }}
@@ -135,10 +135,10 @@
                     <div class="flex space-x-4 mb-4 flex-shrink-0">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">DPW :</label>
-                            <select class="border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                <option>Semua</option>
-                                @foreach($dpwMapping->pluck('dpw')->unique() as $dpw)
-                                    <option>{{ $dpw }}</option>
+                            <select id="filterDPW" class="border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="">Semua</option>
+                                @foreach($mappingWithStats->pluck('dpw')->unique() as $dpw)
+                                    <option value="{{ $dpw }}">{{ $dpw }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -146,6 +146,7 @@
                             <label class="block text-xs font-medium text-gray-700 mb-1">DPD :</label>
                             <input 
                                 type="text" 
+                                id="filterDPD"
                                 placeholder="Masukkan DPD" 
                                 class="border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                             >
@@ -154,7 +155,7 @@
 
                     <!-- Table -->
                     <div class="flex-1 overflow-auto rounded-lg border border-gray-200">
-                        <table class="w-full">
+                        <table class="w-full" id="mappingTable">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs">No.</th>
@@ -167,8 +168,10 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                @forelse($dpwMapping as $index => $mapping)
-                                <tr class="hover:bg-gray-50 transition-colors">
+                                @forelse($mappingWithStats as $index => $mapping)
+                                <tr class="hover:bg-gray-50 transition-colors mapping-row" 
+                                    data-dpw="{{ $mapping->dpw }}" 
+                                    data-dpd="{{ $mapping->dpd }}">
                                     <td class="py-3 px-4 text-xs text-gray-900">{{ $index + 1 }}</td>
                                     <td class="py-3 px-4 text-xs font-medium text-gray-900">{{ $mapping->dpw }}</td>
                                     <td class="py-3 px-4 text-xs text-gray-900">{{ $mapping->dpd }}</td>
@@ -193,23 +196,62 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterDPW = document.getElementById('filterDPW');
+    const filterDPD = document.getElementById('filterDPD');
+    const mappingRows = document.querySelectorAll('.mapping-row');
+    
+    function filterTable() {
+        const dpwValue = filterDPW.value.toLowerCase();
+        const dpdValue = filterDPD.value.toLowerCase();
+        
+        mappingRows.forEach(row => {
+            const rowDPW = row.dataset.dpw.toLowerCase();
+            const rowDPD = row.dataset.dpd.toLowerCase();
+            
+            const dpwMatch = !dpwValue || rowDPW.includes(dpwValue);
+            const dpdMatch = !dpdValue || rowDPD.includes(dpdValue);
+            
+            if (dpwMatch && dpdMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Update row numbers
+        let visibleIndex = 1;
+        mappingRows.forEach(row => {
+            if (row.style.display !== 'none') {
+                row.querySelector('td:first-child').textContent = visibleIndex++;
+            }
+        });
+    }
+    
+    filterDPW.addEventListener('change', filterTable);
+    filterDPD.addEventListener('input', filterTable);
+});
+</script>
+
 <style>
 /* Custom scrollbar for table */
-.overflow-x-auto::-webkit-scrollbar {
+.overflow-auto::-webkit-scrollbar {
     height: 6px;
+    width: 6px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-track {
+.overflow-auto::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 10px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb {
+.overflow-auto::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 10px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+.overflow-auto::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
 </style>
