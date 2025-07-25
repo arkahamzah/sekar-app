@@ -53,7 +53,7 @@ class DataAnggotaController extends Controller
             ->select([
                 'u.nik as NIK',
                 'u.name as NAMA',
-                'k.V_KOTA_GEDUNG as NO_TELP', // Placeholder for phone number
+                DB::raw('COALESCE(k.NO_TELP, "-") as NO_TELP'),
                 'u.created_at as TANGGAL_TERDAFTAR',
                 'i.IURAN_WAJIB',
                 'i.IURAN_SUKARELA',
@@ -92,7 +92,7 @@ class DataAnggotaController extends Controller
             ->select([
                 'k.N_NIK as NIK',
                 'k.V_NAMA_KARYAWAN as NAMA',
-                'k.V_KOTA_GEDUNG as NO_TELP', // Placeholder for phone number
+                DB::raw('COALESCE(k.NO_TELP, "-") as NO_TELP'),
                 DB::raw('CASE WHEN u.nik IS NOT NULL THEN u.created_at ELSE NULL END as TANGGAL_TERDAFTAR'),
                 DB::raw('CASE WHEN u.nik IS NOT NULL THEN "Terdaftar" ELSE "Belum Terdaftar" END as STATUS'),
                 'k.V_SHORT_POSISI as POSISI',
@@ -119,12 +119,12 @@ class DataAnggotaController extends Controller
     {
         $query = DB::table('t_sekar_pengurus as sp')
             ->join('t_karyawan as k', 'sp.N_NIK', '=', 'k.N_NIK')
-            ->join('users as u', 'sp.N_NIK', '=', 'u.nik')
+            ->leftJoin('users as u', 'sp.N_NIK', '=', 'u.nik') // Changed to leftJoin
             ->leftJoin('t_sekar_roles as sr', 'sp.ID_ROLES', '=', 'sr.ID')
             ->select([
                 'sp.N_NIK as NIK',
                 'k.V_NAMA_KARYAWAN as NAMA',
-                'k.V_KOTA_GEDUNG as NO_TELP', // Placeholder for phone number
+                DB::raw('COALESCE(k.NO_TELP, "-") as NO_TELP'),
                 'sp.CREATED_AT as TANGGAL_TERDAFTAR',
                 'sp.DPW',
                 'sp.DPD',
