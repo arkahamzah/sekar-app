@@ -11,6 +11,12 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <!-- Breadcrumb -->
         <div class="mb-6">
             <div class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
@@ -45,6 +51,30 @@
                             <span>{{ $konsultasi->CREATED_AT->format('d M Y, H:i') }}</span>
                         </div>
                     </div>
+                    
+                    <!-- Admin Actions -->
+                    @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                    <div class="ml-4 space-y-2">
+                        @if($konsultasi->STATUS !== 'CLOSED')
+                            <!-- Close Button -->
+                            <form method="POST" action="{{ route('konsultasi.close', $konsultasi->ID) }}" class="inline">
+                                @csrf
+                                <button type="submit" 
+                                        onclick="return confirm('Apakah Anda yakin ingin menutup {{ strtolower($konsultasi->JENIS) }} ini?')"
+                                        class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition">
+                                    Tutup {{ ucfirst(strtolower($konsultasi->JENIS)) }}
+                                </button>
+                            </form>
+                            
+                            <!-- Escalate Button -->
+                            <button type="button" 
+                                    onclick="openEscalateModal()"
+                                    class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 transition block">
+                                Eskalasi
+                            </button>
+                        @endif
+                    </div>
+                    @endif
                 </div>
                 
                 <div class="prose max-w-none">
@@ -121,6 +151,9 @@
                                 <textarea name="komentar" rows="4" 
                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                           placeholder="Tulis komentar atau pertanyaan Anda..." required></textarea>
+                                @error('komentar')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div class="flex justify-between items-center">
                                 <p class="text-xs text-gray-500">Komentar akan dikirim ke admin terkait untuk ditindaklanjuti.</p>
@@ -134,7 +167,7 @@
                     @else
                     <div class="mt-6 pt-6 border-t border-gray-200">
                         <div class="bg-gray-50 p-4 rounded-lg text-center">
-                            <p class="text-gray-600 text-sm">Advokasi/Aspirasi ini telah ditutup. Tidak dapat menambahkan komentar baru.</p>
+                            <p class="text-gray-600 text-sm">{{ ucfirst(strtolower($konsultasi->JENIS)) }} ini telah ditutup. Tidak dapat menambahkan komentar baru.</p>
                         </div>
                     </div>
                     @endif
@@ -143,4 +176,79 @@
         </div>
     </div>
 </div>
+
+<!-- Escalation Modal -->
+@if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+<div id="escalateModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Eskalasi {{ ucfirst(strtolower($konsultasi->JENIS)) }}</h3>
+        
+        <form method="POST" action="{{ route('konsultasi.escalate', $konsultasi->ID) }}">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Eskalasi ke Level</label>
+                <select name="escalate_to" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Pilih Level</option>
+                    @if($konsultasi->TUJUAN === 'DPD')
+                        <option value="DPW">DPW (Daerah Provinsi Wilayah)</option>
+                        <option value="DPP">DPP (Dewan Pengurus Pusat)</option>
+                    @elseif($konsultasi->TUJUAN === 'DPW')
+                        <option value="DPP">DPP (Dewan Pengurus Pusat)</option>
+                    @endif
+                </select>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Catatan Eskalasi</label>
+                <textarea name="escalation_note" rows="3" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Jelaskan alasan eskalasi..." required></textarea>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
+                <p class="text-sm text-yellow-800">
+                    <strong>Perhatian:</strong> Eskalasi akan mengirimkan {{ strtolower($konsultasi->JENIS) }} ini ke admin level yang lebih tinggi untuk penanganan lebih lanjut.
+                </p>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="button" onclick="closeEscalateModal()" 
+                        class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Batal
+                </button>
+                <button type="submit" 
+                        class="flex-1 bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700 transition">
+                    Eskalasi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
+<script>
+function openEscalateModal() {
+    document.getElementById('escalateModal').classList.remove('hidden');
+}
+
+function closeEscalateModal() {
+    document.getElementById('escalateModal').classList.add('hidden');
+    // Reset form
+    document.querySelector('#escalateModal form').reset();
+}
+
+// Close modal when clicking outside
+document.getElementById('escalateModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEscalateModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('escalateModal').classList.contains('hidden')) {
+        closeEscalateModal();
+    }
+});
+</script>
 @endsection

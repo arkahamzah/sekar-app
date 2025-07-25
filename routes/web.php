@@ -1,6 +1,6 @@
 <?php
 // routes/web.php
-//
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
@@ -34,12 +34,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/data-anggota', [DataAnggotaController::class, 'index'])->name('data-anggota.index');
     Route::get('/data-anggota/export', [DataAnggotaController::class, 'export'])->name('data-anggota.export');
     
-    // Advokasi & Aspirasi Routes (renamed from Konsultasi)
-    Route::get('/advokasi-aspirasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
-    Route::get('/advokasi-aspirasi/create', [KonsultasiController::class, 'create'])->name('konsultasi.create');
-    Route::post('/advokasi-aspirasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
-    Route::get('/advokasi-aspirasi/{id}', [KonsultasiController::class, 'show'])->name('konsultasi.show');
-    Route::post('/advokasi-aspirasi/{id}/comment', [KonsultasiController::class, 'addComment'])->name('konsultasi.comment');
+    // Advokasi & Aspirasi Routes (Enhanced)
+    Route::prefix('advokasi-aspirasi')->name('konsultasi.')->group(function () {
+        Route::get('/', [KonsultasiController::class, 'index'])->name('index');
+        Route::get('/create', [KonsultasiController::class, 'create'])->name('create');
+        Route::post('/', [KonsultasiController::class, 'store'])->name('store');
+        Route::get('/{id}', [KonsultasiController::class, 'show'])->name('show');
+        Route::post('/{id}/comment', [KonsultasiController::class, 'addComment'])->name('comment');
+        
+        // Admin only routes
+        Route::middleware('check.admin')->group(function () {
+            Route::post('/{id}/close', [KonsultasiController::class, 'close'])->name('close');
+            Route::post('/{id}/escalate', [KonsultasiController::class, 'escalate'])->name('escalate');
+        });
+    });
     
     // Banpers Routes
     Route::get('/banpers', [BanpersController::class, 'index'])->name('banpers.index');
