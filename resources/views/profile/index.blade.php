@@ -151,7 +151,7 @@
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Total Iuran Terbayar</label>
                             <p class="text-xl font-semibold text-gray-900">Rp {{ number_format($totalIuran, 0, ',', '.') }}</p>
-                            <p class="text-sm text-gray-600">Sejak bergabung {{ $joinDate->format('F Y') }}</p>
+                            <p class="text-sm text-gray-600">Bergabung sejak {{ $joinDate->format('F Y') }}</p>
                         </div>
 
                         <!-- Edit Iuran Sukarela -->
