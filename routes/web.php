@@ -31,12 +31,12 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('dashboard')->with('info', 'Fitur Data Anggota sedang dalam pengembangan.');
     })->name('data-anggota.index');
     
-    // Konsultasi Routes
-    Route::get('/konsultasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
-    Route::get('/konsultasi/create', [KonsultasiController::class, 'create'])->name('konsultasi.create');
-    Route::post('/konsultasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
-    Route::get('/konsultasi/{id}', [KonsultasiController::class, 'show'])->name('konsultasi.show');
-    Route::post('/konsultasi/{id}/comment', [KonsultasiController::class, 'addComment'])->name('konsultasi.comment');
+    // Advokasi & Aspirasi Routes (renamed from Konsultasi)
+    Route::get('/advokasi-aspirasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
+    Route::get('/advokasi-aspirasi/create', [KonsultasiController::class, 'create'])->name('konsultasi.create');
+    Route::post('/advokasi-aspirasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
+    Route::get('/advokasi-aspirasi/{id}', [KonsultasiController::class, 'show'])->name('konsultasi.show');
+    Route::post('/advokasi-aspirasi/{id}/comment', [KonsultasiController::class, 'addComment'])->name('konsultasi.comment');
     
     // Banpers Routes (placeholder)
     Route::get('/banpers', function() {

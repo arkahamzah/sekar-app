@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 class KonsultasiController extends Controller
 {
     /**
-     * Display user's consultations
+     * Display user's advokasi & aspirasi
      */
     public function index()
     {
@@ -27,7 +27,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Show create consultation form
+     * Show create advokasi & aspirasi form
      */
     public function create()
     {
@@ -44,7 +44,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Store new consultation
+     * Store new advokasi & aspirasi
      */
     public function store(Request $request)
     {
@@ -63,15 +63,15 @@ class KonsultasiController extends Controller
             $konsultasi = $this->createKonsultasi($user, $validated);
             
             return redirect()->route('konsultasi.index')
-                            ->with('success', 'Konsultasi/Aspirasi berhasil dibuat dan akan segera ditindaklanjuti.');
+                            ->with('success', 'Advokasi/Aspirasi berhasil dibuat dan akan segera ditindaklanjuti.');
         } catch (\Exception $e) {
             return back()->withInput()
-                        ->with('error', 'Terjadi kesalahan saat membuat konsultasi. Silakan coba lagi.');
+                        ->with('error', 'Terjadi kesalahan saat membuat advokasi/aspirasi. Silakan coba lagi.');
         }
     }
     
     /**
-     * Show consultation detail
+     * Show advokasi & aspirasi detail
      */
     public function show($id)
     {
@@ -86,7 +86,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Add comment to consultation
+     * Add comment to advokasi & aspirasi
      */
     public function addComment(Request $request, $id)
     {
@@ -104,7 +104,7 @@ class KonsultasiController extends Controller
                 // Create comment
                 $this->createKomentar($id, $user->nik, $validated['komentar']);
                 
-                // Update consultation status if needed
+                // Update status if needed
                 $this->updateKonsultasiStatus($konsultasi, $user->nik);
             });
             
@@ -116,7 +116,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get available consultation targets based on employee location
+     * Get available targets based on employee location
      */
     private function getAvailableTargets(?Karyawan $karyawan): array
     {
@@ -184,7 +184,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Create new consultation record
+     * Create new record
      */
     private function createKonsultasi($user, array $validated): Konsultasi
     {
@@ -203,7 +203,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Verify consultation ownership
+     * Verify ownership
      */
     private function verifyKonsultasiOwnership($id, string $nik): Konsultasi
     {
@@ -213,7 +213,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Create consultation comment
+     * Create comment
      */
     private function createKomentar($konsultasiId, string $nik, string $komentar): KonsultasiKomentar
     {
@@ -228,7 +228,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Update consultation status based on activity
+     * Update status based on activity
      */
     private function updateKonsultasiStatus(Konsultasi $konsultasi, string $updatedBy): void
     {

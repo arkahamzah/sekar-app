@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Konsultasi & Aspirasi - SEKAR')
+@section('title', 'Advokasi & Aspirasi - SEKAR')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -12,13 +12,13 @@
         @endif
 
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Konsultasi & Aspirasi</h1>
+            <h1 class="text-2xl font-bold text-gray-900">Advokasi & Aspirasi</h1>
             <a href="{{ route('konsultasi.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
                 Buat Baru
             </a>
         </div>
 
-        <!-- List Konsultasi -->
+        <!-- List Advokasi & Aspirasi -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
             @forelse($konsultasi as $item)
             <div class="border-b border-gray-200 last:border-b-0 p-6 hover:bg-gray-50 transition">
@@ -56,11 +56,11 @@
                 <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                 </svg>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada konsultasi</h3>
-                <p class="text-gray-600 mb-4">Mulai dengan membuat konsultasi atau aspirasi pertama Anda.</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada advokasi & aspirasi</h3>
+                <p class="text-gray-600 mb-4">Mulai dengan membuat advokasi atau aspirasi pertama Anda.</p>
                 <a href="{{ route('konsultasi.create') }}" 
                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-                    Buat Konsultasi
+                    Buat Advokasi/Aspirasi
                 </a>
             </div>
             @endforelse
