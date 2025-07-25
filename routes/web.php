@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\KonsultasiController;
+use App\Http\Controllers\DataAnggotaController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
@@ -26,10 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::post('/profile/update-iuran', [ProfileController::class, 'updateIuranSukarela'])->name('profile.update-iuran');
     
-    // Data Anggota Routes (placeholder - will be developed later)
-    Route::get('/data-anggota', function() {
-        return redirect()->route('dashboard')->with('info', 'Fitur Data Anggota sedang dalam pengembangan.');
-    })->name('data-anggota.index');
+    // Data Anggota Routes
+    Route::get('/data-anggota', [DataAnggotaController::class, 'index'])->name('data-anggota.index');
+    Route::get('/data-anggota/export', [DataAnggotaController::class, 'export'])->name('data-anggota.export');
     
     // Advokasi & Aspirasi Routes (renamed from Konsultasi)
     Route::get('/advokasi-aspirasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
