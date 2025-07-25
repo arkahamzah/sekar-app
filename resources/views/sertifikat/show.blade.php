@@ -52,7 +52,7 @@
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
-                        <img src="{{ asset('asset/logo.png') }}" alt="SEKAR Logo" class="h-16 w-16 bg-white rounded-full p-2">
+                        <img src="{{ asset('asset/logo-tabs.png') }}" alt="SEKAR Logo" class="h-16 w-16 bg-white rounded-full p-2">
                         <div>
                             <h2 class="text-2xl font-bold">SERIKAT KARYAWAN TELKOM</h2>
                             <p class="text-blue-100">SERTIFIKAT KEANGGOTAAN</p>
