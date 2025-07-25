@@ -174,7 +174,7 @@ class DashboardController extends Controller
             ->where('k.V_SHORT_POSISI', 'NOT LIKE', '%GPTP%')
             ->count();
     }
-
+ 
     /**
      * Count pengurus in specific area - FIXED to only count active employees
      */
