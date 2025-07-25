@@ -49,9 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/sertifikat', [SertifikatController::class, 'show'])->name('sertifikat.show');
     Route::get('/sertifikat/download', [SertifikatController::class, 'download'])->name('sertifikat.download');
     
-    // Setting Routes (Admin only - dengan middleware dapat ditambahkan nanti)
-    Route::middleware(['check.admin'])->group(function () {
-        Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
-        Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
-    });
+    // Setting Routes (Admin check will be done in controller)
+    Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
+    Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
 });

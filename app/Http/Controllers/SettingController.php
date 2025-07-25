@@ -14,6 +14,12 @@ class SettingController extends Controller
      */
     public function index()
     {
+        // Check admin access
+        if (!$this->isAdmin()) {
+            return redirect()->route('dashboard')
+                           ->with('error', 'Akses ditolak. Fitur ini hanya untuk admin.');
+        }
+        
         $settings = $this->getAllSettings();
         
         return view('setting.index', compact('settings'));
@@ -24,6 +30,12 @@ class SettingController extends Controller
      */
     public function update(Request $request)
     {
+        // Check admin access
+        if (!$this->isAdmin()) {
+            return redirect()->route('dashboard')
+                           ->with('error', 'Akses ditolak. Fitur ini hanya untuk admin.');
+        }
+        
         $validated = $request->validate([
             'sekjen_signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'waketum_signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -51,6 +63,21 @@ class SettingController extends Controller
             return redirect()->route('setting.index')
                            ->with('error', 'Terjadi kesalahan saat menyimpan pengaturan.');
         }
+    }
+
+    /**
+     * Check if current user is admin
+     */
+    private function isAdmin(): bool
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->pengurus || !$user->pengurus->role) {
+            return false;
+        }
+        
+        $adminRoles = ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD'];
+        return in_array($user->pengurus->role->NAME, $adminRoles);
     }
 
     /**
