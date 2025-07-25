@@ -14,26 +14,120 @@ use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
+    /**
+     * Display user profile with iuran information
+     */
     public function index()
     {
         $user = Auth::user();
+        $profileData = $this->getProfileData($user);
+
+        return view('profile.index', $profileData);
+    }
+
+    /**
+     * Update iuran sukarela for authenticated user
+     */
+    public function updateIuranSukarela(Request $request)
+    {
+        $validated = $request->validate([
+            'iuran_sukarela' => 'required|numeric|min:0',
+        ]);
+
+        $user = Auth::user();
+        $newAmount = (int)$validated['iuran_sukarela'];
         
-        // Get employee data
-        $karyawan = Karyawan::where('N_NIK', $user->nik)->first();
+        try {
+            $result = $this->processIuranSukarelaUpdate($user, $newAmount);
+            
+            return redirect()->route('profile.index')
+                           ->with($result['status'], $result['message']);
+        } catch (\Exception $e) {
+            return redirect()->route('profile.index')
+                           ->with('error', 'Terjadi kesalahan saat memproses perubahan iuran.');
+        }
+    }
+
+    /**
+     * Get all profile data for user
+     */
+    private function getProfileData(User $user): array
+    {
+        $karyawan = $this->getKaryawanData($user->nik);
+        $iuran = $this->getIuranData($user->nik); // This will get the latest/highest value
+        $iuranWajib = $this->getIuranWajib();
+        $iuranSukarela = $iuran ? (int)$iuran->IURAN_SUKARELA : 0;
         
-        // Get current iuran data
-        $iuran = Iuran::where('N_NIK', $user->nik)->first();
+        $pendingChange = $this->getPendingIuranChange($user->nik);
+        $effectiveIuranSukarela = $pendingChange ? (int)$pendingChange->NOMINAL_BARU : $iuranSukarela;
         
-        // Get active parameters (iuran wajib)
+        $iuranCalculations = $this->calculateIuranTotals($user, $iuranWajib, $effectiveIuranSukarela);
+        $iuranHistory = $this->getIuranHistory($user->nik);
+
+        return [
+            'user' => $user,
+            'karyawan' => $karyawan,
+            'iuran' => $iuran,
+            'iuranWajib' => $iuranWajib,
+            'iuranSukarela' => $iuranSukarela,
+            'effectiveIuranSukarela' => $effectiveIuranSukarela,
+            'totalIuranPerBulan' => $iuranCalculations['totalPerBulan'],
+            'totalIuran' => $iuranCalculations['totalPaid'],
+            'joinDate' => $user->created_at,
+            'iuranHistory' => $iuranHistory,
+            'pendingChange' => $pendingChange,
+        ];
+    }
+
+    /**
+     * Get karyawan data
+     */
+    private function getKaryawanData(string $nik): ?Karyawan
+    {
+        return Karyawan::where('N_NIK', $nik)->first();
+    }
+
+    /**
+     * Get iuran data - HANDLE DUPLICATES by getting the latest with highest value
+     */
+    private function getIuranData(string $nik): ?Iuran
+    {
+        // Get the record with highest IURAN_SUKARELA value, then latest created
+        return Iuran::where('N_NIK', $nik)
+                   ->orderByRaw('CAST(IURAN_SUKARELA AS UNSIGNED) DESC')
+                   ->orderBy('CREATED_AT', 'DESC')
+                   ->first();
+    }
+
+    /**
+     * Get current iuran wajib amount
+     */
+    private function getIuranWajib(): int
+    {
         $params = Params::where('IS_AKTIF', '1')
                        ->where('TAHUN', date('Y'))
                        ->first();
         
-        $iuranWajib = $params ? (int)$params->NOMINAL_IURAN_WAJIB : 25000;
-        $iuranSukarela = $iuran ? (int)$iuran->IURAN_SUKARELA : 0;
-        
-        // Calculate total monthly iuran
-        $totalIuranPerBulan = $iuranWajib + $iuranSukarela;
+        return $params ? (int)$params->NOMINAL_IURAN_WAJIB : 25000;
+    }
+
+    /**
+     * Get pending iuran change
+     */
+    private function getPendingIuranChange(string $nik): ?IuranHistory
+    {
+        return IuranHistory::where('N_NIK', $nik)
+                          ->where('JENIS', 'SUKARELA')
+                          ->where('STATUS_PROSES', 'PENDING')
+                          ->first();
+    }
+
+    /**
+     * Calculate iuran totals
+     */
+    private function calculateIuranTotals(User $user, int $iuranWajib, int $iuranSukarela): array
+    {
+        $totalPerBulan = $iuranWajib + $iuranSukarela;
         
         // Calculate months since joining
         $joinDate = $user->created_at;
@@ -42,114 +136,143 @@ class ProfileController extends Controller
         $yearDiff = $currentDate->year - $joinDate->year;
         $monthDiff = $currentDate->month - $joinDate->month;
         
-        // Total months including current month
-        $monthsSinceJoin = ($yearDiff * 12) + $monthDiff + 1;
-        $monthsSinceJoin = max(1, $monthsSinceJoin);
-        
-        // Calculate total iuran paid
-        $totalIuran = $totalIuranPerBulan * $monthsSinceJoin;
-        
-        // Get iuran history
-        $iuranHistory = IuranHistory::where('N_NIK', $user->nik)
-                                  ->orderBy('CREATED_AT', 'desc')
-                                  ->get();
-        
-        // Check if there's pending iuran sukarela change
-        $pendingChange = IuranHistory::where('N_NIK', $user->nik)
-                                   ->where('JENIS', 'SUKARELA')
-                                   ->where('STATUS_PROSES', 'PENDING')
-                                   ->first();
-        
-        // Calculate effective iuran sukarela (considering pending changes)
-        $effectiveIuranSukarela = $iuranSukarela;
-        if ($pendingChange) {
-            $effectiveIuranSukarela = (int)$pendingChange->NOMINAL_BARU;
-        }
-        
-        return view('profile.index', compact(
-            'user',
-            'karyawan', 
-            'iuran',
-            'iuranWajib',
-            'iuranSukarela',
-            'effectiveIuranSukarela',
-            'totalIuranPerBulan',
-            'totalIuran',
-            'joinDate',
-            'iuranHistory',
-            'pendingChange'
-        ));
+        $monthsSinceJoin = max(1, ($yearDiff * 12) + $monthDiff + 1);
+        $totalPaid = $totalPerBulan * $monthsSinceJoin;
+
+        return [
+            'totalPerBulan' => $totalPerBulan,
+            'totalPaid' => $totalPaid,
+        ];
     }
-    
-    public function updateIuranSukarela(Request $request)
+
+    /**
+     * Get iuran history
+     */
+    private function getIuranHistory(string $nik)
     {
-        $request->validate([
-            'iuran_sukarela' => 'required|numeric|min:0',
-        ]);
-        
-        $user = Auth::user();
-        $iuranSukarelaLama = 0;
-        $iuranSukarelaBaru = (int)$request->iuran_sukarela;
-        
-        // Get current iuran sukarela
-        $iuran = Iuran::where('N_NIK', $user->nik)->first();
-        if ($iuran) {
-            $iuranSukarelaLama = (int)$iuran->IURAN_SUKARELA;
-        }
+        return IuranHistory::where('N_NIK', $nik)
+                          ->orderBy('CREATED_AT', 'desc')
+                          ->get();
+    }
+
+    /**
+     * Process iuran sukarela update
+     */
+    private function processIuranSukarelaUpdate(User $user, int $newAmount): array
+    {
+        $currentAmount = $this->getCurrentIuranSukarela($user->nik);
         
         // Check if there's any change
-        if ($iuranSukarelaLama == $iuranSukarelaBaru) {
-            return redirect()->route('profile.index')
-                           ->with('info', 'Tidak ada perubahan pada iuran sukarela.');
+        if ($currentAmount === $newAmount) {
+            return [
+                'status' => 'info',
+                'message' => 'Tidak ada perubahan pada iuran sukarela.'
+            ];
         }
-        
-        // Check if there's already pending change
-        $pendingChange = IuranHistory::where('N_NIK', $user->nik)
-                                   ->where('JENIS', 'SUKARELA')
-                                   ->whereIn('STATUS_PROSES', ['PENDING', 'PROCESSED'])
-                                   ->first();
-        
-        if ($pendingChange) {
-            return redirect()->route('profile.index')
-                           ->with('error', 'Masih ada perubahan iuran sukarela yang sedang diproses. Silakan tunggu hingga selesai.');
+
+        // Check for existing pending changes
+        if ($this->hasPendingChanges($user->nik)) {
+            return [
+                'status' => 'error',
+                'message' => 'Masih ada perubahan iuran sukarela yang sedang diproses. Silakan tunggu hingga selesai.'
+            ];
         }
+
+        DB::transaction(function () use ($user, $currentAmount, $newAmount) {
+            $this->createIuranHistory($user->nik, $currentAmount, $newAmount);
+            $this->updateOrCreateIuranRecord($user->nik, $newAmount);
+        });
+
+        return [
+            'status' => 'success',
+            'message' => 'Iuran sukarela berhasil diperbarui. Perubahan akan diproses dalam 1 bulan dan diterapkan dalam 2 bulan sesuai kebijakan HC.'
+        ];
+    }
+
+    /**
+     * Get current iuran sukarela amount - HANDLE DUPLICATES
+     */
+    private function getCurrentIuranSukarela(string $nik): int
+    {
+        $iuran = $this->getIuranData($nik); // This already handles duplicates
+        return $iuran ? (int)$iuran->IURAN_SUKARELA : 0;
+    }
+
+    /**
+     * Check if user has pending changes
+     */
+    private function hasPendingChanges(string $nik): bool
+    {
+        return IuranHistory::where('N_NIK', $nik)
+                          ->where('JENIS', 'SUKARELA')
+                          ->whereIn('STATUS_PROSES', ['PENDING', 'PROCESSED'])
+                          ->exists();
+    }
+
+    /**
+     * Create iuran history record
+     */
+    private function createIuranHistory(string $nik, int $oldAmount, int $newAmount): void
+    {
+        IuranHistory::createWithDates([
+            'N_NIK' => $nik,
+            'JENIS' => 'SUKARELA',
+            'NOMINAL_LAMA' => $oldAmount,
+            'NOMINAL_BARU' => $newAmount,
+            'STATUS_PROSES' => 'PENDING',
+            'TGL_PERUBAHAN' => now(),
+            'KETERANGAN' => 'Perubahan iuran sukarela oleh anggota',
+            'CREATED_BY' => $nik,
+            'CREATED_AT' => now()
+        ]);
+    }
+
+    /**
+     * Update or create iuran record - PREVENT DUPLICATES
+     */
+    private function updateOrCreateIuranRecord(string $nik, int $newAmount): void
+    {
+        // Delete any duplicate records first, keep the latest one
+        $this->cleanupDuplicateIuran($nik);
         
-        DB::transaction(function () use ($user, $iuranSukarelaLama, $iuranSukarelaBaru, $iuran) {
-            // Create history record
-            IuranHistory::createWithDates([
-                'N_NIK' => $user->nik,
-                'JENIS' => 'SUKARELA',
-                'NOMINAL_LAMA' => $iuranSukarelaLama,
-                'NOMINAL_BARU' => $iuranSukarelaBaru,
-                'STATUS_PROSES' => 'PENDING',
-                'TGL_PERUBAHAN' => now(),
-                'KETERANGAN' => 'Perubahan iuran sukarela oleh anggota',
-                'CREATED_BY' => $user->nik,
+        $iuran = $this->getIuranData($nik);
+        
+        if ($iuran) {
+            $iuran->update([
+                'IURAN_SUKARELA' => (string)$newAmount,
+                'UPDATE_BY' => $nik,
+                'UPDATED_AT' => now()
+            ]);
+        } else {
+            $iuranWajib = $this->getIuranWajib();
+            
+            Iuran::create([
+                'N_NIK' => $nik,
+                'IURAN_WAJIB' => (string)$iuranWajib,
+                'IURAN_SUKARELA' => (string)$newAmount,
+                'CREATED_BY' => $nik,
                 'CREATED_AT' => now()
             ]);
-            
-            // Update or create iuran record (for immediate display, will be processed later)
-            if ($iuran) {
-                $iuran->update([
-                    'IURAN_SUKARELA' => $iuranSukarelaBaru,
-                    'UPDATE_BY' => $user->nik,
-                    'UPDATED_AT' => now()
-                ]);
-            } else {
-                $params = Params::where('IS_AKTIF', '1')->where('TAHUN', date('Y'))->first();
-                $iuranWajib = $params ? $params->NOMINAL_IURAN_WAJIB : '25000';
-                
-                Iuran::create([
-                    'N_NIK' => $user->nik,
-                    'IURAN_WAJIB' => $iuranWajib,
-                    'IURAN_SUKARELA' => $iuranSukarelaBaru,
-                    'CREATED_BY' => $user->nik,
-                    'CREATED_AT' => now()
-                ]);
-            }
-        });
+        }
+    }
+
+    /**
+     * Clean up duplicate iuran records
+     */
+    private function cleanupDuplicateIuran(string $nik): void
+    {
+        $records = Iuran::where('N_NIK', $nik)->get();
         
-        return redirect()->route('profile.index')
-                        ->with('success', 'Iuran sukarela berhasil diperbarui. Perubahan akan diproses dalam 1 bulan dan diterapkan dalam 2 bulan sesuai kebijakan HC.');
+        if ($records->count() > 1) {
+            // Keep the record with highest IURAN_SUKARELA and latest CREATED_AT
+            $keepRecord = $records->sortByDesc(function ($item) {
+                return [(int)$item->IURAN_SUKARELA, $item->CREATED_AT];
+            })->first();
+            
+            // Delete other records
+            Iuran::where('N_NIK', $nik)
+                 ->where('ID', '!=', $keepRecord->ID)
+                 ->delete();
+        }
     }
 }

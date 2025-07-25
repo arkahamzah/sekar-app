@@ -8,8 +8,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        $this->call([
-            SekarDataSeeder::class,
-        ]);
+        // Remove all seeder calls - data will come from real input and sekar.sql
+        // $this->call([
+        //     SekarDataSeeder::class,
+        // ]);
     }
 }

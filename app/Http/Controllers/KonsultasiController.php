@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 class KonsultasiController extends Controller
 {
+    /**
+     * Display user's consultations
+     */
     public function index()
     {
         $user = Auth::user();
         
-        // Get user's consultations
         $konsultasi = Konsultasi::where('N_NIK', $user->nik)
                                 ->with(['karyawan'])
                                 ->orderBy('CREATED_AT', 'desc')
@@ -24,29 +26,29 @@ class KonsultasiController extends Controller
         return view('konsultasi.index', compact('konsultasi'));
     }
     
+    /**
+     * Show create consultation form
+     */
     public function create()
     {
         $user = Auth::user();
         $karyawan = Karyawan::where('N_NIK', $user->nik)->first();
         
-        // Get available DPW/DPD options based on location
-        $availableTargets = $this->getAvailableTargets($karyawan);
-        
-        // Kategori advokasi
-        $kategoriAdvokasi = [
-            'Pelanggaran Hak Pekerja',
-            'Masalah Kesejahteraan',
-            'Diskriminasi',
-            'Keselamatan Kerja',
-            'Lainnya'
+        $data = [
+            'karyawan' => $karyawan,
+            'availableTargets' => $this->getAvailableTargets($karyawan),
+            'kategoriAdvokasi' => $this->getKategoriAdvokasi(),
         ];
         
-        return view('konsultasi.create', compact('karyawan', 'availableTargets', 'kategoriAdvokasi'));
+        return view('konsultasi.create', $data);
     }
     
+    /**
+     * Store new consultation
+     */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'jenis' => 'required|in:ADVOKASI,ASPIRASI',
             'kategori_advokasi' => 'required_if:jenis,ADVOKASI',
             'tujuan' => 'required|in:DPP,DPW,DPD,GENERAL',
@@ -57,23 +59,20 @@ class KonsultasiController extends Controller
         
         $user = Auth::user();
         
-        Konsultasi::create([
-            'N_NIK' => $user->nik,
-            'JENIS' => $request->jenis,
-            'KATEGORI_ADVOKASI' => $request->kategori_advokasi,
-            'TUJUAN' => $request->tujuan,
-            'TUJUAN_SPESIFIK' => $request->tujuan_spesifik,
-            'JUDUL' => $request->judul,
-            'DESKRIPSI' => $request->deskripsi,
-            'STATUS' => 'OPEN',
-            'CREATED_BY' => $user->nik,
-            'CREATED_AT' => now()
-        ]);
-        
-        return redirect()->route('konsultasi.index')
-                        ->with('success', 'Konsultasi/Aspirasi berhasil dibuat dan akan segera ditindaklanjuti.');
+        try {
+            $konsultasi = $this->createKonsultasi($user, $validated);
+            
+            return redirect()->route('konsultasi.index')
+                            ->with('success', 'Konsultasi/Aspirasi berhasil dibuat dan akan segera ditindaklanjuti.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                        ->with('error', 'Terjadi kesalahan saat membuat konsultasi. Silakan coba lagi.');
+        }
     }
     
+    /**
+     * Show consultation detail
+     */
     public function show($id)
     {
         $user = Auth::user();
@@ -86,73 +85,159 @@ class KonsultasiController extends Controller
         return view('konsultasi.show', compact('konsultasi'));
     }
     
+    /**
+     * Add comment to consultation
+     */
     public function addComment(Request $request, $id)
     {
-        $request->validate([
-            'komentar' => 'required'
+        $validated = $request->validate([
+            'komentar' => 'required|string'
         ]);
         
         $user = Auth::user();
         
-        // Verify ownership
-        $konsultasi = Konsultasi::where('ID', $id)
-                                ->where('N_NIK', $user->nik)
-                                ->firstOrFail();
-        
-        KonsultasiKomentar::create([
-            'ID_KONSULTASI' => $id,
-            'N_NIK' => $user->nik,
-            'KOMENTAR' => $request->komentar,
-            'PENGIRIM_ROLE' => 'USER',
-            'CREATED_AT' => now(),
-            'CREATED_BY' => $user->nik
-        ]);
-        
-        // Update status to IN_PROGRESS if still OPEN
-        if ($konsultasi->STATUS === 'OPEN') {
-            $konsultasi->update([
-                'STATUS' => 'IN_PROGRESS',
-                'UPDATED_BY' => $user->nik,
-                'UPDATED_AT' => now()
-            ]);
+        try {
+            DB::transaction(function () use ($validated, $id, $user) {
+                // Verify ownership
+                $konsultasi = $this->verifyKonsultasiOwnership($id, $user->nik);
+                
+                // Create comment
+                $this->createKomentar($id, $user->nik, $validated['komentar']);
+                
+                // Update consultation status if needed
+                $this->updateKonsultasiStatus($konsultasi, $user->nik);
+            });
+            
+            return redirect()->route('konsultasi.show', $id)
+                            ->with('success', 'Komentar berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan saat menambahkan komentar.');
         }
-        
-        return redirect()->route('konsultasi.show', $id)
-                        ->with('success', 'Komentar berhasil ditambahkan.');
     }
     
-    private function getAvailableTargets($karyawan)
+    /**
+     * Get available consultation targets based on employee location
+     */
+    private function getAvailableTargets(?Karyawan $karyawan): array
     {
         $targets = [
             'GENERAL' => 'SEKAR Pusat'
         ];
         
-        if ($karyawan) {
-            // Based on location, add DPW/DPD options
-            $city = $karyawan->V_KOTA_GEDUNG;
-            
-            // Simple mapping - in real app this would come from database
-            $dpwMapping = [
-                'BANDUNG' => 'DPW Jabar',
-                'JAKARTA' => 'DPW Jakarta',
-                'SURABAYA' => 'DPW Jatim',
-            ];
-            
-            $dpdMapping = [
-                'BANDUNG' => 'DPD Bandung',
-                'JAKARTA' => 'DPD Jakarta Pusat', 
-                'SURABAYA' => 'DPD Surabaya',
-            ];
-            
-            if (isset($dpwMapping[$city])) {
-                $targets['DPW'] = $dpwMapping[$city];
-            }
-            
-            if (isset($dpdMapping[$city])) {
-                $targets['DPD'] = $dpdMapping[$city];
-            }
+        if (!$karyawan) {
+            return $targets;
+        }
+        
+        $city = $karyawan->V_KOTA_GEDUNG;
+        $dpwMapping = $this->getDpwMapping();
+        $dpdMapping = $this->getDpdMapping();
+        
+        if (isset($dpwMapping[$city])) {
+            $targets['DPW'] = $dpwMapping[$city];
+        }
+        
+        if (isset($dpdMapping[$city])) {
+            $targets['DPD'] = $dpdMapping[$city];
         }
         
         return $targets;
+    }
+    
+    /**
+     * Get DPW mapping configuration
+     */
+    private function getDpwMapping(): array
+    {
+        return [
+            'BANDUNG' => 'DPW Jabar',
+            'JAKARTA' => 'DPW Jakarta',
+            'SURABAYA' => 'DPW Jatim',
+            // Add more mappings as needed
+        ];
+    }
+    
+    /**
+     * Get DPD mapping configuration
+     */
+    private function getDpdMapping(): array
+    {
+        return [
+            'BANDUNG' => 'DPD Bandung',
+            'JAKARTA' => 'DPD Jakarta Pusat',
+            'SURABAYA' => 'DPD Surabaya',
+            // Add more mappings as needed
+        ];
+    }
+    
+    /**
+     * Get available advocacy categories
+     */
+    private function getKategoriAdvokasi(): array
+    {
+        return [
+            'Pelanggaran Hak Pekerja',
+            'Masalah Kesejahteraan',
+            'Diskriminasi',
+            'Keselamatan Kerja',
+            'Lainnya'
+        ];
+    }
+    
+    /**
+     * Create new consultation record
+     */
+    private function createKonsultasi($user, array $validated): Konsultasi
+    {
+        return Konsultasi::create([
+            'N_NIK' => $user->nik,
+            'JENIS' => $validated['jenis'],
+            'KATEGORI_ADVOKASI' => $validated['kategori_advokasi'] ?? null,
+            'TUJUAN' => $validated['tujuan'],
+            'TUJUAN_SPESIFIK' => $validated['tujuan_spesifik'] ?? null,
+            'JUDUL' => $validated['judul'],
+            'DESKRIPSI' => $validated['deskripsi'],
+            'STATUS' => 'OPEN',
+            'CREATED_BY' => $user->nik,
+            'CREATED_AT' => now()
+        ]);
+    }
+    
+    /**
+     * Verify consultation ownership
+     */
+    private function verifyKonsultasiOwnership($id, string $nik): Konsultasi
+    {
+        return Konsultasi::where('ID', $id)
+                         ->where('N_NIK', $nik)
+                         ->firstOrFail();
+    }
+    
+    /**
+     * Create consultation comment
+     */
+    private function createKomentar($konsultasiId, string $nik, string $komentar): KonsultasiKomentar
+    {
+        return KonsultasiKomentar::create([
+            'ID_KONSULTASI' => $konsultasiId,
+            'N_NIK' => $nik,
+            'KOMENTAR' => $komentar,
+            'PENGIRIM_ROLE' => 'USER',
+            'CREATED_AT' => now(),
+            'CREATED_BY' => $nik
+        ]);
+    }
+    
+    /**
+     * Update consultation status based on activity
+     */
+    private function updateKonsultasiStatus(Konsultasi $konsultasi, string $updatedBy): void
+    {
+        if ($konsultasi->STATUS === 'OPEN') {
+            $konsultasi->update([
+                'STATUS' => 'IN_PROGRESS',
+                'UPDATED_BY' => $updatedBy,
+                'UPDATED_AT' => now()
+            ]);
+        }
     }
 }

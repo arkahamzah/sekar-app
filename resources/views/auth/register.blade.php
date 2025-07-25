@@ -58,11 +58,12 @@
                 <input 
                     type="text" 
                     name="iuran_sukarela" 
-                    placeholder="Rp." 
+                    id="iuranInput"
+                    placeholder="0" 
                     value="{{ old('iuran_sukarela') }}"
                     class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200 bg-gray-50 text-sm"
                 >
-                <p class="text-xs text-gray-500 mt-0.5">Diisi dalam kelipatan Rp 5.000</p>
+                <p class="text-xs text-gray-500 mt-0.5">Minimal kelipatan Rp 5.000</p>
             </div>
 
             <div class="flex items-start space-x-2">
@@ -183,6 +184,55 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancelBtn');
     const passwordForm = document.getElementById('passwordForm');
     const registerForm = document.getElementById('registerForm');
+    const iuranInput = document.getElementById('iuranInput');
+
+    // Format iuran input as number
+    iuranInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        // Remove all non-numeric characters
+        value = value.replace(/[^0-9]/g, '');
+        
+        // Convert to number and format
+        if (value) {
+            const number = parseInt(value);
+            e.target.value = number.toString();
+        } else {
+            e.target.value = '';
+        }
+    });
+
+    // Validate iuran sukarela on blur
+    iuranInput.addEventListener('blur', function(e) {
+        let value = parseInt(e.target.value) || 0;
+        
+        if (value > 0 && value % 5000 !== 0) {
+            // Round to nearest 5000
+            value = Math.round(value / 5000) * 5000;
+            e.target.value = value.toString();
+            
+            // Show warning
+            showTemporaryMessage('Iuran sukarela dibulatkan ke kelipatan Rp 5.000', 'warning');
+        }
+    });
+
+    // Show temporary message
+    function showTemporaryMessage(message, type = 'info') {
+        const existingAlert = document.querySelector('.temp-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `temp-alert bg-${type === 'warning' ? 'yellow' : 'blue'}-50 border border-${type === 'warning' ? 'yellow' : 'blue'}-200 text-${type === 'warning' ? 'yellow' : 'blue'}-700 px-3 py-2 rounded-lg text-xs mb-4`;
+        alertDiv.textContent = message;
+        
+        const form = document.getElementById('registerForm');
+        form.insertBefore(alertDiv, form.firstChild);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
+    }
 
     // Show modal when Daftar button is clicked
     daftarBtn.addEventListener('click', function(e) {
@@ -194,7 +244,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const agreement = document.querySelector('input[name="agreement"]').checked;
         
         if (!nik || !name || !agreement) {
-            alert('Silakan lengkapi semua field yang wajib diisi');
+            showTemporaryMessage('Silakan lengkapi semua field yang wajib diisi', 'warning');
+            return;
+        }
+        
+        // Validate iuran sukarela if provided
+        const iuranValue = parseInt(iuranInput.value) || 0;
+        if (iuranValue > 0 && iuranValue % 5000 !== 0) {
+            showTemporaryMessage('Iuran sukarela harus dalam kelipatan Rp 5.000', 'warning');
             return;
         }
         
