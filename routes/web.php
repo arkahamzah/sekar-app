@@ -22,9 +22,14 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Profile Routes
+    // Profile Routes (accessible from user dropdown)
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::post('/profile/update-iuran', [ProfileController::class, 'updateIuranSukarela'])->name('profile.update-iuran');
+    
+    // Data Anggota Routes (placeholder - will be developed later)
+    Route::get('/data-anggota', function() {
+        return redirect()->route('dashboard')->with('info', 'Fitur Data Anggota sedang dalam pengembangan.');
+    })->name('data-anggota.index');
     
     // Konsultasi Routes
     Route::get('/konsultasi', [KonsultasiController::class, 'index'])->name('konsultasi.index');
@@ -32,4 +37,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/konsultasi', [KonsultasiController::class, 'store'])->name('konsultasi.store');
     Route::get('/konsultasi/{id}', [KonsultasiController::class, 'show'])->name('konsultasi.show');
     Route::post('/konsultasi/{id}/comment', [KonsultasiController::class, 'addComment'])->name('konsultasi.comment');
+    
+    // Banpers Routes (placeholder)
+    Route::get('/banpers', function() {
+        return redirect()->route('dashboard')->with('info', 'Fitur Banpers sedang dalam pengembangan.');
+    })->name('banpers.index');
 });

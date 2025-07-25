@@ -69,8 +69,8 @@ class SekarDataSeeder extends Seeder
                 'UPDATED_BY' => null,
                 'UPDATED_AT' => null,
                 'DPP' => null,
-                'DPW' => null,
-                'DPD' => '',
+                'DPW' => 'DPW Jabar',
+                'DPD' => 'DPD Bandung',
                 'ID_ROLES' => 1
             ],
             [
@@ -83,8 +83,8 @@ class SekarDataSeeder extends Seeder
                 'UPDATED_BY' => null,
                 'UPDATED_AT' => null,
                 'DPP' => 'BN00',
-                'DPW' => null,
-                'DPD' => null,
+                'DPW' => 'DPW Jabar',
+                'DPD' => 'DPD Jakarta',
                 'ID_ROLES' => 2
             ]
         ]);
@@ -145,6 +145,24 @@ class SekarDataSeeder extends Seeder
                 'CREATED_AT' => '2025-07-22 09:15:40',
                 'UPDATE_BY' => null,
                 'UPDATED_AT' => null
+            ]
+        ]);
+
+        // Insert T_IURAN_HISTORY data (contoh history)
+        DB::table('t_iuran_history')->insert([
+            [
+                'ID' => 1,
+                'N_NIK' => '401031',
+                'JENIS' => 'SUKARELA',
+                'NOMINAL_LAMA' => '0',
+                'NOMINAL_BARU' => '5000',
+                'STATUS_PROSES' => 'IMPLEMENTED',
+                'TGL_PERUBAHAN' => '2025-05-15 10:30:00',
+                'TGL_PROSES' => '2025-06-20 00:00:00',
+                'TGL_IMPLEMENTASI' => '2025-07-01 00:00:00',
+                'KETERANGAN' => 'Pendaftaran awal iuran sukarela',
+                'CREATED_BY' => '401031',
+                'CREATED_AT' => '2025-05-15 10:30:00'
             ]
         ]);
 
