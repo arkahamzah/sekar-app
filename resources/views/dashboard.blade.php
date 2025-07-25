@@ -11,7 +11,6 @@
             <h1 class="text-2xl font-bold text-gray-900">Dashboard SEKAR</h1>
             <p class="text-gray-600 text-sm mt-1">Ringkasan data keanggotaan dan pengurus SEKAR</p>
         </div>
-
         <!-- Statistics Cards -->
         <div class="grid grid-cols-4 gap-4 mb-6">
             <!-- Anggota Aktif -->
