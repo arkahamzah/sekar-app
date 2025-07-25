@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Buat Konsultasi & Aspirasi - SEKAR')
+@section('title', 'Buat Advokasi & Aspirasi - SEKAR')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -8,11 +8,11 @@
         <!-- Breadcrumb -->
         <div class="mb-6">
             <div class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-                <a href="{{ route('konsultasi.index') }}" class="hover:text-blue-600">Konsultasi & Aspirasi</a>
+                <a href="{{ route('konsultasi.index') }}" class="hover:text-blue-600">Advokasi & Aspirasi</a>
                 <span>/</span>
                 <span class="text-gray-900">Buat Baru</span>
             </div>
-            <h1 class="text-2xl font-bold text-gray-900">Buat Konsultasi & Aspirasi</h1>
+            <h1 class="text-2xl font-bold text-gray-900">Buat Advokasi & Aspirasi</h1>
         </div>
 
         <div class="max-w-2xl">
@@ -85,7 +85,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Judul</label>
                     <input type="text" name="judul" value="{{ old('judul') }}" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Judul konsultasi/aspirasi" required>
+                           placeholder="Judul advokasi/aspirasi" required>
                 </div>
 
                 <!-- Deskripsi -->
@@ -93,7 +93,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Deskripsi</label>
                     <textarea name="deskripsi" rows="6" 
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Jelaskan secara detail konsultasi atau aspirasi Anda..." required>{{ old('deskripsi') }}</textarea>
+                              placeholder="Jelaskan secara detail advokasi atau aspirasi Anda..." required>{{ old('deskripsi') }}</textarea>
                 </div>
 
                 <!-- Info Card -->

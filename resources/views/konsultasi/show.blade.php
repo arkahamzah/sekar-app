@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Konsultasi - SEKAR')
+@section('title', 'Detail Advokasi & Aspirasi - SEKAR')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -14,7 +14,7 @@
         <!-- Breadcrumb -->
         <div class="mb-6">
             <div class="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-                <a href="{{ route('konsultasi.index') }}" class="hover:text-blue-600">Konsultasi & Aspirasi</a>
+                <a href="{{ route('konsultasi.index') }}" class="hover:text-blue-600">Advokasi & Aspirasi</a>
                 <span>/</span>
                 <span class="text-gray-900">Detail</span>
             </div>
@@ -134,7 +134,7 @@
                     @else
                     <div class="mt-6 pt-6 border-t border-gray-200">
                         <div class="bg-gray-50 p-4 rounded-lg text-center">
-                            <p class="text-gray-600 text-sm">Konsultasi ini telah ditutup. Tidak dapat menambahkan komentar baru.</p>
+                            <p class="text-gray-600 text-sm">Advokasi/Aspirasi ini telah ditutup. Tidak dapat menambahkan komentar baru.</p>
                         </div>
                     </div>
                     @endif
