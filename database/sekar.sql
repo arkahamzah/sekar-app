@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 26, 2025 at 07:28 AM
+-- Generation Time: Jul 26, 2025 at 09:33 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -64,6 +64,13 @@ CREATE TABLE `migrations` (
   `batch` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `migrations`
+--
+
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
+(1, '2025_07_26_064820_create_password_reset_tokens_table', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -84,6 +91,18 @@ INSERT INTO `m_jajaran` (`ID`, `NAMA_JAJARAN`, `IS_AKTIF`) VALUES
 (1, 'KETUA UMUM', '1'),
 (2, 'WAKIL SEKRETARIS JENDRAL', '1'),
 (3, 'SEKRETARIS JENDRAL', '1');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `email` varchar(255) NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -268,7 +287,8 @@ CREATE TABLE `t_konsultasi` (
 --
 
 INSERT INTO `t_konsultasi` (`ID`, `N_NIK`, `JENIS`, `KATEGORI_ADVOKASI`, `TUJUAN`, `TUJUAN_SPESIFIK`, `JUDUL`, `DESKRIPSI`, `STATUS`, `CREATED_BY`, `CREATED_AT`, `UPDATED_BY`, `UPDATED_AT`, `CLOSED_BY`, `CLOSED_AT`) VALUES
-(1, '401032', 'ADVOKASI', 'Pelecehan di Tempat Kerja', 'GENERAL', NULL, 'love bombing', 'force relationship', 'OPEN', '401032', '2025-07-26 05:27:40', NULL, NULL, NULL, NULL);
+(1, '401032', 'ADVOKASI', 'Pelecehan di Tempat Kerja', 'GENERAL', NULL, 'love bombing', 'force relationship', 'OPEN', '401032', '2025-07-26 05:27:40', NULL, NULL, NULL, NULL),
+(2, '401032', 'ADVOKASI', 'Pemutusan Hubungan Kerja', 'GENERAL', NULL, 'work work', 'wok wok', 'OPEN', '401032', '2025-07-26 05:47:28', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -421,7 +441,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `nik`, `email_verified_at`, `password`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'ADHIE PRANATHA', '401031@sekar.local', '401031', NULL, '$2y$12$N2.RNwKRnnE4R/VDc5JMXu5W3Ko6xL7fdRXCNWPOIJ4FpKOJpvtw6', NULL, '2025-07-24 19:42:29', '2025-07-24 19:42:29'),
+(1, 'ADHIE PRANATHA', 'arkhamzahs@gmail.com', '401031', NULL, '$2y$12$4rMzkWddRp9h/mdkLWcIAOIfxfB/l2k5laHTvv3dcYguyo9y3NtcO', NULL, '2025-07-24 19:42:29', '2025-07-26 00:23:03'),
 (2, 'SARI DEWI LESTARI', '401032@sekar.local', '401032', NULL, '$2y$12$2W9sX2db/DuRnpKe.7R52uXCHqUItLeNursm3WXIZA.g.3.4VK5d.', NULL, '2025-07-24 19:52:46', '2025-07-24 19:52:46'),
 (3, 'BUDI SANTOSO', '401033@sekar.local', '401033', NULL, '$2y$12$C3JLMGZ.Iv0CsJOvwkNzmOpltR7EgL2PmxWrhnoiwupoWz9GdHXKq', NULL, '2025-07-25 03:39:17', '2025-07-25 03:39:17'),
 (4, 'DIANA SARTIKA', '501031@sekar.local', '501031', NULL, '$2y$12$C3JLMGZ.Iv0CsJOvwkNzmOpltR7EgL2PmxWrhnoiwupoWz9GdHXKq', NULL, '2025-07-25 03:39:17', '2025-07-25 03:39:17'),
@@ -457,6 +477,14 @@ ALTER TABLE `migrations`
 --
 ALTER TABLE `m_jajaran`
   ADD PRIMARY KEY (`ID`) USING BTREE;
+
+--
+-- Indexes for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`email`),
+  ADD KEY `password_reset_tokens_email_created_at_index` (`email`,`created_at`),
+  ADD KEY `password_reset_tokens_created_at_index` (`created_at`);
 
 --
 -- Indexes for table `p_params`
@@ -542,7 +570,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `m_jajaran`
@@ -584,7 +612,7 @@ ALTER TABLE `t_karyawan`
 -- AUTO_INCREMENT for table `t_konsultasi`
 --
 ALTER TABLE `t_konsultasi`
-  MODIFY `ID` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `ID` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `t_konsultasi_komentar`
