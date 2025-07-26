@@ -199,7 +199,7 @@
                 </div>
                 <div class="info-item">
                     <div class="info-label">Status</div>
-                    <div class="info-value">{{ $konsultasi->status_text }}</div>
+                    <div class="info-value">{{ $konsultasi->STATUS }}</div>
                 </div>
                 @if($karyawan)
                 <div class="info-item">
@@ -213,7 +213,7 @@
                 @endif
                 <div class="info-item">
                     <div class="info-label">Tanggal</div>
-                    <div class="info-value">{{ $konsultasi->CREATED_AT->format('d F Y, H:i') }} WIB</div>
+                    <div class="info-value">{{ date('d F Y, H:i', strtotime($konsultasi->CREATED_AT)) }} WIB</div>
                 </div>
                 @if($konsultasi->KATEGORI_ADVOKASI)
                 <div class="info-item">
@@ -276,7 +276,7 @@
             </p>
             <p style="margin-top: 15px; font-size: 11px; color: #9ca3af;">
                 © {{ date('Y') }} PT Telkom Indonesia. Semua hak dilindungi.<br>
-                Dikirim pada {{ now()->format('d F Y, H:i') }} WIB
+                Dikirim pada {{ date('d F Y, H:i') }} WIB
             </p>
         </div>
     </div>

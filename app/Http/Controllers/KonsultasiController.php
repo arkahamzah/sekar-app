@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class KonsultasiController extends Controller
 {
@@ -275,7 +276,6 @@ class KonsultasiController extends Controller
             'MAKASSAR' => 'DPW Sulsel',
             'DENPASAR' => 'DPW Bali',
             'BALIKPAPAN' => 'DPW Kaltim',
-            // Add more mappings as needed
         ];
     }
     
@@ -292,7 +292,6 @@ class KonsultasiController extends Controller
             'MAKASSAR' => 'DPD Makassar',
             'DENPASAR' => 'DPD Denpasar',
             'BALIKPAPAN' => 'DPD Balikpapan',
-            // Add more mappings as needed
         ];
     }
     
@@ -386,37 +385,47 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Send email notification to relevant admins
+     * Send email notification to relevant admins (FINAL - SINGLE EMAIL VERSION)
      */
     private function sendEmailNotification(Konsultasi $konsultasi, string $actionType): void
     {
+        // Prevent duplicate emails with cache-based deduplication
+        $lockKey = "email_lock_{$konsultasi->ID}_{$actionType}";
+        
+        // Check if we already sent email for this konsultasi+action in last 2 minutes
+        if (Cache::has($lockKey)) {
+            Log::info("Email notification skipped (duplicate prevention)", [
+                'konsultasi_id' => $konsultasi->ID,
+                'action_type' => $actionType,
+                'reason' => 'Cache lock active'
+            ]);
+            return;
+        }
+        
+        // Set lock for 2 minutes to prevent rapid duplicates
+        Cache::put($lockKey, true, 120);
+        
         try {
-            $adminEmails = $this->getRelevantAdminEmails($konsultasi);
+            // FORCE SINGLE EMAIL TO ELIMINATE DUPLICATES
+            $singleEmail = 'arkhamzahs@gmail.com';
             
-            if (!empty($adminEmails)) {
-                // Use queue for better performance (optional)
-                if (config('queue.default') !== 'sync') {
-                    SendKonsultasiNotificationJob::dispatch($konsultasi, $actionType, $adminEmails)
-                                                 ->onQueue('emails');
-                } else {
-                    // Send immediately if queue is not configured
-                    foreach ($adminEmails as $email) {
-                        Mail::to($email)->send(new KonsultasiNotification($konsultasi, $actionType));
-                    }
-                }
-                
-                Log::info("Email notifications sent for konsultasi ID: {$konsultasi->ID}", [
-                    'action_type' => $actionType,
-                    'recipients_count' => count($adminEmails),
-                    'recipients' => $adminEmails
-                ]);
-            } else {
-                Log::warning("No admin emails found for konsultasi ID: {$konsultasi->ID}", [
-                    'action_type' => $actionType,
-                    'tujuan' => $konsultasi->TUJUAN
-                ]);
-            }
+            // Send only 1 email regardless of admin structure
+            Mail::to($singleEmail)->send(new KonsultasiNotification($konsultasi, $actionType));
+            
+            Log::info("Single email notification sent for konsultasi ID: {$konsultasi->ID}", [
+                'action_type' => $actionType,
+                'recipient' => $singleEmail,
+                'konsultasi_judul' => $konsultasi->JUDUL,
+                'konsultasi_jenis' => $konsultasi->JENIS,
+                'konsultasi_tujuan' => $konsultasi->TUJUAN,
+                'timestamp' => now()->format('Y-m-d H:i:s'),
+                'cache_lock_key' => $lockKey
+            ]);
+            
         } catch (\Exception $e) {
+            // Remove lock on error so it can be retried
+            Cache::forget($lockKey);
+            
             Log::error("Failed to send email notification for konsultasi ID: {$konsultasi->ID}", [
                 'error' => $e->getMessage(),
                 'action_type' => $actionType,
@@ -426,7 +435,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get relevant admin emails based on konsultasi target
+     * Get relevant admin emails based on konsultasi target (BACKUP - NOT USED)
      */
     private function getRelevantAdminEmails(Konsultasi $konsultasi): array
     {
@@ -466,15 +475,16 @@ class KonsultasiController extends Controller
             $emails = $this->getFallbackAdminEmails();
         }
         
-        return array_unique(array_filter($emails));
+        return $emails;
     }
     
     /**
-     * Get DPD admin emails
+     * Get DPD admin emails (BACKUP - NOT USED)
      */
     private function getDpdAdminEmails(string $kota): array
     {
-        return SekarPengurus::join('users', 't_sekar_pengurus.N_NIK', '=', 'users.nik')
+        return DB::table('users')
+            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
             ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
             ->join('t_karyawan', 't_sekar_pengurus.N_NIK', '=', 't_karyawan.N_NIK')
             ->where('t_sekar_roles.NAME', 'ADMIN_DPD')
@@ -486,7 +496,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get DPW admin emails
+     * Get DPW admin emails (BACKUP - NOT USED)
      */
     private function getDpwAdminEmails(string $kota): array
     {
@@ -494,7 +504,8 @@ class KonsultasiController extends Controller
         $dpwMapping = $this->getDpwMapping();
         $dpw = $dpwMapping[$kota] ?? 'DPW Jabar';
         
-        return SekarPengurus::join('users', 't_sekar_pengurus.N_NIK', '=', 'users.nik')
+        return DB::table('users')
+            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
             ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
             ->where('t_sekar_roles.NAME', 'ADMIN_DPW')
             ->where('t_sekar_pengurus.DPW', $dpw)
@@ -505,11 +516,12 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get DPP admin emails
+     * Get DPP admin emails (BACKUP - NOT USED)
      */
     private function getDppAdminEmails(): array
     {
-        return SekarPengurus::join('users', 't_sekar_pengurus.N_NIK', '=', 'users.nik')
+        return DB::table('users')
+            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
             ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
             ->where('t_sekar_roles.NAME', 'ADMIN_DPP')
             ->whereNotNull('users.email')
@@ -519,11 +531,12 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get fallback admin emails when no specific admins found
+     * Get fallback admin emails when no specific admins found (BACKUP - NOT USED)
      */
     private function getFallbackAdminEmails(): array
     {
-        return SekarPengurus::join('users', 't_sekar_pengurus.N_NIK', '=', 'users.nik')
+        return DB::table('users')
+            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
             ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
             ->where('t_sekar_roles.NAME', 'ADM') // Super admin
             ->whereNotNull('users.email')
