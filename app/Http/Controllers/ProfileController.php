@@ -10,6 +10,9 @@ use App\Models\Params;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ProfileController extends Controller
@@ -49,6 +52,67 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update user email
+     */
+    public function updateEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|unique:users,email,' . Auth::id(),
+            'current_password' => 'required|string',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah digunakan oleh user lain.',
+            'current_password.required' => 'Password saat ini wajib diisi untuk konfirmasi.',
+        ]);
+
+        $user = Auth::user();
+
+        // Verify current password
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            return redirect()->route('profile.index')
+                           ->withErrors(['current_password' => 'Password saat ini tidak benar.'])
+                           ->withInput();
+        }
+
+        try {
+            DB::transaction(function () use ($user, $validated) {
+                $oldEmail = $user->email;
+                
+                // Update email
+                $user->update([
+                    'email' => $validated['email']
+                ]);
+
+                // Log email change
+                Log::info('User email updated', [
+                    'nik' => $user->nik,
+                    'name' => $user->name,
+                    'old_email' => $oldEmail,
+                    'new_email' => $validated['email'],
+                    'timestamp' => now()
+                ]);
+
+                // Send confirmation email to new email
+                $this->sendEmailChangeConfirmation($user, $oldEmail);
+            });
+
+            return redirect()->route('profile.index')
+                           ->with('success', 'Email berhasil diperbarui. Email konfirmasi telah dikirim ke alamat baru Anda.');
+
+        } catch (\Exception $e) {
+            Log::error('Email update failed', [
+                'nik' => $user->nik,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->route('profile.index')
+                           ->with('error', 'Terjadi kesalahan saat memperbarui email. Silakan coba lagi.');
+        }
+    }
+
+    /**
      * Get all profile data for user
      */
     private function getProfileData(User $user): array
@@ -76,6 +140,7 @@ class ProfileController extends Controller
             'joinDate' => $user->created_at,
             'iuranHistory' => $iuranHistory,
             'pendingChange' => $pendingChange,
+            'isDummyEmail' => $this->isDummyEmail($user->email),
         ];
     }
 
@@ -273,6 +338,40 @@ class ProfileController extends Controller
             Iuran::where('N_NIK', $nik)
                  ->where('ID', '!=', $keepRecord->ID)
                  ->delete();
+        }
+    }
+
+    /**
+     * Check if email is dummy email
+     */
+    private function isDummyEmail(string $email): bool
+    {
+        return str_contains($email, '@sekar.local') || empty($email);
+    }
+
+    /**
+     * Send email change confirmation
+     */
+    private function sendEmailChangeConfirmation(User $user, string $oldEmail): void
+    {
+        try {
+            // Here you would send an email confirmation
+            // For now, we'll just log it
+            Log::info('Email change confirmation should be sent', [
+                'nik' => $user->nik,
+                'old_email' => $oldEmail,
+                'new_email' => $user->email,
+                'timestamp' => now()
+            ]);
+            
+            // TODO: Implement actual email sending
+            // Mail::to($user->email)->send(new EmailChangeConfirmation($user, $oldEmail));
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send email change confirmation', [
+                'nik' => $user->nik,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

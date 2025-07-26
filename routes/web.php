@@ -9,6 +9,7 @@ use App\Http\Controllers\DataAnggotaController;
 use App\Http\Controllers\BanpersController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SertifikatController;
+use App\Http\Controllers\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
@@ -18,12 +19,23 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+    
+    // Password Reset Routes
+    Route::prefix('password')->name('password.')->group(function () {
+        Route::get('/reset', [PasswordResetController::class, 'showRequestForm'])->name('request');
+        Route::post('/email', [PasswordResetController::class, 'sendResetLink'])->name('email');
+        Route::get('/reset/{token}', [PasswordResetController::class, 'showResetForm'])->name('reset');
+        Route::post('/reset', [PasswordResetController::class, 'resetPassword'])->name('update');
+        Route::get('/success', [PasswordResetController::class, 'showSuccessPage'])->name('success');
+    });
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware('auth')->group(function () {
+    Route::post('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.update-email');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Profile Routes (accessible from user dropdown)
@@ -60,4 +72,10 @@ Route::middleware('auth')->group(function () {
     // Setting Routes (Admin check will be done in controller)
     Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
     Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
+    
+    // Admin Routes for Password Reset Management
+    Route::middleware('check.admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/password-tokens', [PasswordResetController::class, 'adminTokenList'])->name('password.tokens');
+        Route::delete('/password-tokens/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('password.cleanup');
+    });
 });

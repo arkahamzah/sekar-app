@@ -99,6 +99,56 @@
                     </div>
                 </div>
 
+                <!-- Email Management -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Informasi Email</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Terdaftar</label>
+                                <div class="flex items-center">
+                                    <p class="text-gray-900 mr-3">{{ $user->email }}</p>
+                                    @if($isDummyEmail)
+                                        <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Dummy Email</span>
+                                    @else
+                                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Email Aktif</span>
+                                    @endif
+                                </div>
+                                @if($isDummyEmail)
+                                    <p class="text-xs text-yellow-600 mt-1">⚠️ Gunakan email pribadi untuk fitur reset password dan notifikasi</p>
+                                @else
+                                    <p class="text-xs text-green-600 mt-1">✅ Email valid untuk notifikasi dan reset password</p>
+                                @endif
+                            </div>
+                            <button id="editEmailBtn" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+                                {{ $isDummyEmail ? 'Tambah Email' : 'Ubah Email' }}
+                            </button>
+                        </div>
+
+                        @if($isDummyEmail)
+                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <h4 class="text-sm font-medium text-blue-900 mb-1">Manfaat Email Pribadi</h4>
+                                    <ul class="text-xs text-blue-700 space-y-1">
+                                        <li>• Reset password sendiri tanpa bantuan admin</li>
+                                        <li>• Notifikasi langsung untuk aktivitas akun</li>
+                                        <li>• Komunikasi resmi dari SEKAR</li>
+                                        <li>• Keamanan akun yang lebih baik</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+
                 <!-- Iuran Information -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div class="px-6 py-4 border-b border-gray-200">
@@ -216,6 +266,60 @@
     </div>
 </div>
 
+<!-- Modal Edit Email -->
+<div id="editEmailModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ $isDummyEmail ? 'Tambah Email Pribadi' : 'Ubah Email' }}</h3>
+        
+        <form method="POST" action="{{ route('profile.update-email') }}" id="emailForm">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email Pribadi</label>
+                <input 
+                    type="email" 
+                    name="email" 
+                    value="{{ $isDummyEmail ? '' : $user->email }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="email.pribadi@gmail.com"
+                    required
+                >
+                <p class="text-xs text-gray-500 mt-1">Email untuk notifikasi dan reset password</p>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Password Saat Ini</label>
+                <input 
+                    type="password" 
+                    name="current_password" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Password untuk konfirmasi"
+                    required
+                >
+                <p class="text-xs text-gray-500 mt-1">Diperlukan untuk keamanan</p>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4">
+                <h4 class="text-sm font-medium text-blue-800 mb-2">Informasi Penting:</h4>
+                <ul class="text-xs text-blue-700 space-y-1">
+                    <li>• Email akan digunakan untuk reset password</li>
+                    <li>• Notifikasi sistem akan dikirim ke email ini</li>
+                    <li>• Pastikan email dapat diakses dengan mudah</li>
+                    <li>• Email konfirmasi akan dikirim setelah perubahan</li>
+                </ul>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="button" id="cancelEmailBtn" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Batal
+                </button>
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                    {{ $isDummyEmail ? 'Tambah Email' : 'Perbarui Email' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Modal Edit Iuran Sukarela -->
 <div id="editIuranModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -265,10 +369,36 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const editEmailBtn = document.getElementById('editEmailBtn');
+    const emailModal = document.getElementById('editEmailModal');
+    const cancelEmailBtn = document.getElementById('cancelEmailBtn');
+    
     const editBtn = document.getElementById('editIuranBtn');
     const modal = document.getElementById('editIuranModal');
     const cancelBtn = document.getElementById('cancelEditBtn');
     
+    // Email modal handlers
+    if (editEmailBtn) {
+        editEmailBtn.addEventListener('click', function() {
+            emailModal.classList.remove('hidden');
+        });
+    }
+    
+    if (cancelEmailBtn) {
+        cancelEmailBtn.addEventListener('click', function() {
+            emailModal.classList.add('hidden');
+        });
+    }
+    
+    if (emailModal) {
+        emailModal.addEventListener('click', function(e) {
+            if (e.target === emailModal) {
+                emailModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Iuran modal handlers
     if (editBtn && !editBtn.disabled) {
         editBtn.addEventListener('click', function() {
             modal.classList.remove('hidden');
@@ -288,7 +418,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Show validation errors if any
+    @if($errors->any())
+        @if($errors->has('email') || $errors->has('current_password'))
+            emailModal.classList.remove('hidden');
+        @endif
+    @endif
 });
 </script>
 @endsection
-
