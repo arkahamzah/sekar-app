@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
     Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
 <<<<<<< HEAD
+<<<<<<< HEAD
     
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -80,6 +81,8 @@ Route::middleware('auth')->group(function () {
 =======
 >>>>>>> parent of cca1520 (update-reset pass)
     });
+=======
+>>>>>>> parent of 2634a47 (tambah reset pasword dan change email)
 =======
 >>>>>>> parent of 2634a47 (tambah reset pasword dan change email)
 });
