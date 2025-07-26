@@ -43,7 +43,10 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        // Check if user is admin and redirect accordingly
+        $redirectUrl = $this->getRedirectUrl($user);
+        
+        return redirect()->intended($redirectUrl);
     }
 
     public function register(Request $request)
@@ -90,15 +93,15 @@ class AuthController extends Controller
                 Auth::login($user);
             });
 
-            return redirect()->route('dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang di SEKAR.');
+            // Check if newly registered user is admin
+            $redirectUrl = $this->getRedirectUrl(Auth::user());
             
+            return redirect($redirectUrl)->with('success', 'Pendaftaran berhasil! Selamat datang di SEKAR.');
+
         } catch (\Exception $e) {
-            Log::error('Registration Error:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return back()->withInput()->with('error', 'Terjadi kesalahan saat registrasi: ' . $e->getMessage());
+            Log::error('Registration error: ' . $e->getMessage());
+            return back()->withInput()
+                        ->with('error', 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
         }
     }
 
@@ -108,51 +111,132 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')->with('success', 'Anda telah berhasil logout.');
     }
 
     /**
-     * Create or update iuran record - PREVENT DUPLICATES
+     * Determine redirect URL based on user role
      */
-    private function createOrUpdateIuranRecord(string $nik, int $iuranSukarela): void
+    private function getRedirectUrl($user)
     {
-        $params = Params::where('IS_AKTIF', '1')
-                        ->where('TAHUN', date('Y'))
-                        ->first();
-        
-        $iuranWajib = $params ? $params->NOMINAL_IURAN_WAJIB : '25000';
+        try {
+            // Check if user is admin using database query
+            $adminData = DB::select("
+                SELECT sr.NAME as role_name
+                FROM t_sekar_pengurus sp
+                LEFT JOIN t_sekar_roles sr ON sp.ID_ROLES = sr.ID
+                WHERE sp.N_NIK = ?
+            ", [$user->nik]);
 
-        // CHECK FOR EXISTING RECORD FIRST
-        $existingIuran = Iuran::where('N_NIK', $nik)->first();
-        
-        if ($existingIuran) {
-            // UPDATE EXISTING RECORD - DON'T CREATE NEW ONE
-            $existingIuran->update([
-                'IURAN_WAJIB' => $iuranWajib,
-                'IURAN_SUKARELA' => (string) $iuranSukarela,
-                'UPDATE_BY' => $nik,
-                'UPDATED_AT' => now(),
+            if (!empty($adminData)) {
+                $roleName = $adminData[0]->role_name;
+                $adminRoles = ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD'];
+                
+                if (in_array($roleName, $adminRoles)) {
+                    // User is admin, redirect to admin dashboard
+                    Log::info('Admin user logged in, redirecting to admin dashboard', [
+                        'user_nik' => $user->nik,
+                        'user_name' => $user->name,
+                        'role' => $roleName
+                    ]);
+                    
+                    return route('admin.dashboard');
+                }
+            }
+
+            // User is not admin, redirect to regular dashboard
+            Log::info('Regular user logged in, redirecting to user dashboard', [
+                'user_nik' => $user->nik,
+                'user_name' => $user->name
             ]);
             
-            Log::info('Iuran Record Updated:', [
-                'nik' => $nik,
-                'iuran_sukarela' => (string) $iuranSukarela
-            ]);
-        } else {
-            // CREATE NEW RECORD ONLY IF NOT EXISTS
-            $iuranRecord = Iuran::create([
-                'N_NIK' => $nik,
-                'IURAN_WAJIB' => $iuranWajib,
-                'IURAN_SUKARELA' => (string) $iuranSukarela,
-                'CREATED_BY' => $nik,
-                'CREATED_AT' => now(),
-            ]);
+            return route('dashboard');
 
-            Log::info('Iuran Record Created:', [
-                'record_id' => $iuranRecord->ID,
-                'nik' => $nik,
-                'iuran_sukarela' => (string) $iuranSukarela
-            ]);
+        } catch (\Exception $e) {
+            Log::error('Error determining redirect URL: ' . $e->getMessage());
+            // Fallback to regular dashboard if error occurs
+            return route('dashboard');
+        }
+    }
+
+    /**
+     * Create or update iuran record
+     */
+    private function createOrUpdateIuranRecord($nik, $iuranSukarela)
+    {
+        try {
+            // Check if record already exists
+            $existingIuran = Iuran::where('N_NIK', $nik)->first();
+            
+            if ($existingIuran) {
+                // Update existing record
+                $existingIuran->update([
+                    'N_IURAN_SUKARELA' => $iuranSukarela,
+                    'UPDATED_AT' => now(),
+                ]);
+                Log::info('Updated existing iuran record', ['nik' => $nik, 'iuran' => $iuranSukarela]);
+            } else {
+                // Create new record
+                Iuran::create([
+                    'N_NIK' => $nik,
+                    'N_IURAN_SUKARELA' => $iuranSukarela,
+                    'CREATED_AT' => now(),
+                ]);
+                Log::info('Created new iuran record', ['nik' => $nik, 'iuran' => $iuranSukarela]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in iuran record creation/update: ' . $e->getMessage());
+            // Don't throw exception here to avoid breaking registration
+        }
+    }
+
+    /**
+     * Check if user is admin (static method for use in other controllers)
+     */
+    public static function isUserAdmin($user)
+    {
+        try {
+            $adminData = DB::select("
+                SELECT sr.NAME as role_name
+                FROM t_sekar_pengurus sp
+                LEFT JOIN t_sekar_roles sr ON sp.ID_ROLES = sr.ID
+                WHERE sp.N_NIK = ?
+            ", [$user->nik]);
+
+            if (!empty($adminData)) {
+                $roleName = $adminData[0]->role_name;
+                $adminRoles = ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD'];
+                return in_array($roleName, $adminRoles);
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Error checking admin status: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get user admin role
+     */
+    public static function getUserAdminRole($user)
+    {
+        try {
+            $adminData = DB::select("
+                SELECT sr.NAME as role_name, sr.DESC as role_desc
+                FROM t_sekar_pengurus sp
+                LEFT JOIN t_sekar_roles sr ON sp.ID_ROLES = sr.ID
+                WHERE sp.N_NIK = ?
+            ", [$user->nik]);
+
+            if (!empty($adminData)) {
+                return $adminData[0];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error getting admin role: ' . $e->getMessage());
+            return null;
         }
     }
 }
