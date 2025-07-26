@@ -18,7 +18,7 @@ class AdminKonsultasiController extends Controller
         $user = Auth::user();
         
         try {
-            // Get admin info
+            // Get admin info untuk filtering
             $adminData = DB::select("
                 SELECT 
                     sp.ID_ROLES, sr.NAME as role_name, sr.`DESC` as role_desc,
@@ -28,15 +28,29 @@ class AdminKonsultasiController extends Controller
                 WHERE sp.N_NIK = ?
             ", [$user->nik]);
             
-            $adminInfo = $adminData[0] ?? null;
-            $adminRole = $adminInfo->role_name ?? null;
+            $adminInfo = count($adminData) > 0 ? $adminData[0] : null;
+            $adminRole = $adminInfo && isset($adminInfo->role_name) ? $adminInfo->role_name : null;
             
-            // Build query based on admin role and access level
+            // Build query berdasarkan level admin dan filter
             $query = "
                 SELECT 
-                    ka.*,
-                    k.NAMA as pengaju_nama,
-                    k.N_NIK as pengaju_nik
+                    ka.ID,
+                    ka.N_NIK_PENGAJU,
+                    ka.JENIS,
+                    ka.KATEGORI_ADVOKASI,
+                    ka.TUJUAN,
+                    ka.TUJUAN_SPESIFIK,
+                    ka.JUDUL,
+                    ka.DESKRIPSI,
+                    ka.STATUS,
+                    ka.CREATED_AT,
+                    ka.UPDATED_AT,
+                    ka.CLOSED_AT,
+                    ka.CLOSED_BY,
+                    k.V_NAMA_KARYAWAN as pengaju_nama,
+                    k.N_NIK as pengaju_nik,
+                    k.V_KOTA_GEDUNG as pengaju_lokasi,
+                    (SELECT COUNT(*) FROM t_konsultasi_komentar kk WHERE kk.ID_KONSULTASI = ka.ID) as total_komentar
                 FROM t_konsultasi_advokasi ka
                 LEFT JOIN t_karyawan k ON ka.N_NIK_PENGAJU = k.N_NIK
                 WHERE 1=1
@@ -44,18 +58,18 @@ class AdminKonsultasiController extends Controller
             
             $params = [];
             
-            // Filter by admin access level
+            // Filter berdasarkan level admin
             if ($adminRole !== 'ADM') {
-                if ($adminRole === 'ADMIN_DPW' && $adminInfo->DPW) {
+                if ($adminRole === 'ADMIN_DPW' && isset($adminInfo->DPW) && $adminInfo->DPW) {
                     $query .= " AND SUBSTRING(ka.TUJUAN_SPESIFIK, 1, 5) = ?";
                     $params[] = $adminInfo->DPW;
-                } elseif ($adminRole === 'ADMIN_DPD' && $adminInfo->DPD) {
+                } elseif ($adminRole === 'ADMIN_DPD' && isset($adminInfo->DPD) && $adminInfo->DPD) {
                     $query .= " AND ka.TUJUAN_SPESIFIK = ?";
                     $params[] = $adminInfo->DPD;
                 }
             }
             
-            // Apply filters
+            // Apply filters dari request
             if ($request->filled('status')) {
                 $query .= " AND ka.STATUS = ?";
                 $params[] = $request->status;
@@ -66,9 +80,14 @@ class AdminKonsultasiController extends Controller
                 $params[] = $request->jenis;
             }
             
+            if ($request->filled('tujuan')) {
+                $query .= " AND ka.TUJUAN = ?";
+                $params[] = $request->tujuan;
+            }
+            
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query .= " AND (ka.JUDUL LIKE ? OR ka.DESKRIPSI LIKE ? OR k.NAMA LIKE ?)";
+                $query .= " AND (ka.JUDUL LIKE ? OR ka.DESKRIPSI LIKE ? OR k.V_NAMA_KARYAWAN LIKE ?)";
                 $params[] = "%{$search}%";
                 $params[] = "%{$search}%";
                 $params[] = "%{$search}%";
@@ -84,17 +103,20 @@ class AdminKonsultasiController extends Controller
                 $params[] = $request->date_to;
             }
             
-            $query .= " ORDER BY ka.CREATED_AT DESC";
-            
-            // Get total count for pagination
-            $countQuery = str_replace("SELECT ka.*, k.NAMA as pengaju_nama, k.N_NIK as pengaju_nik", "SELECT COUNT(*) as total", $query);
-            $totalCount = DB::select($countQuery, $params)[0]->total ?? 0;
+            // Get total count untuk pagination
+            $countQuery = str_replace(
+                "SELECT ka.ID, ka.N_NIK_PENGAJU, ka.JENIS, ka.KATEGORI_ADVOKASI, ka.TUJUAN, ka.TUJUAN_SPESIFIK, ka.JUDUL, ka.DESKRIPSI, ka.STATUS, ka.CREATED_AT, ka.UPDATED_AT, ka.CLOSED_AT, ka.CLOSED_BY, k.V_NAMA_KARYAWAN as pengaju_nama, k.N_NIK as pengaju_nik, k.V_KOTA_GEDUNG as pengaju_lokasi, (SELECT COUNT(*) FROM t_konsultasi_komentar kk WHERE kk.ID_KONSULTASI = ka.ID) as total_komentar",
+                "SELECT COUNT(*) as total",
+                $query
+            );
+            $totalResult = DB::select($countQuery, $params);
+            $totalCount = count($totalResult) > 0 ? $totalResult[0]->total : 0;
             
             // Apply pagination
             $perPage = 20;
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
-            $query .= " LIMIT {$perPage} OFFSET {$offset}";
+            $query .= " ORDER BY ka.CREATED_AT DESC LIMIT {$perPage} OFFSET {$offset}";
             
             $konsultasi = collect(DB::select($query, $params));
             
@@ -111,7 +133,7 @@ class AdminKonsultasiController extends Controller
             // Get statistics
             $stats = $this->getKonsultasiStats($adminInfo);
             
-            return view('admin.konsultasi.index', compact('konsultasi', 'stats', 'adminRole', 'pagination'));
+            return view('admin.konsultasi.index', compact('konsultasi', 'stats', 'adminRole', 'pagination', 'adminInfo'));
             
         } catch (\Exception $e) {
             Log::error('Error loading admin konsultasi: ' . $e->getMessage());
@@ -127,7 +149,8 @@ class AdminKonsultasiController extends Controller
                     'last_page' => 1,
                     'has_more_pages' => false,
                     'has_previous_pages' => false,
-                ]
+                ],
+                'adminInfo' => null
             ])->with('error', 'Terjadi kesalahan saat memuat data konsultasi.');
         }
     }
@@ -140,7 +163,7 @@ class AdminKonsultasiController extends Controller
         $user = Auth::user();
         
         try {
-            // Get admin info
+            // Get admin info untuk filtering
             $adminData = DB::select("
                 SELECT 
                     sp.ID_ROLES, sr.NAME as role_name,
@@ -150,15 +173,16 @@ class AdminKonsultasiController extends Controller
                 WHERE sp.N_NIK = ?
             ", [$user->nik]);
             
-            $adminInfo = $adminData[0] ?? null;
+            $adminInfo = count($adminData) > 0 ? $adminData[0] : null;
             
-            // Get konsultasi with access control
+            // Get konsultasi dengan access control
             $query = "
                 SELECT 
                     ka.*,
-                    k.NAMA as pengaju_nama,
+                    k.V_NAMA_KARYAWAN as pengaju_nama,
                     k.N_NIK as pengaju_nik,
-                    k.EMAIL as pengaju_email
+                    k.EMAIL as pengaju_email,
+                    k.V_KOTA_GEDUNG as pengaju_lokasi
                 FROM t_konsultasi_advokasi ka
                 LEFT JOIN t_karyawan k ON ka.N_NIK_PENGAJU = k.N_NIK
                 WHERE ka.ID = ?
@@ -166,12 +190,12 @@ class AdminKonsultasiController extends Controller
             
             $params = [$id];
             
-            // Apply access control
-            if ($adminInfo && $adminInfo->role_name !== 'ADM') {
-                if ($adminInfo->role_name === 'ADMIN_DPW' && $adminInfo->DPW) {
+            // Apply access control berdasarkan level admin
+            if ($adminInfo && isset($adminInfo->role_name) && $adminInfo->role_name !== 'ADM') {
+                if ($adminInfo->role_name === 'ADMIN_DPW' && isset($adminInfo->DPW) && $adminInfo->DPW) {
                     $query .= " AND SUBSTRING(ka.TUJUAN_SPESIFIK, 1, 5) = ?";
                     $params[] = $adminInfo->DPW;
-                } elseif ($adminInfo->role_name === 'ADMIN_DPD' && $adminInfo->DPD) {
+                } elseif ($adminInfo->role_name === 'ADMIN_DPD' && isset($adminInfo->DPD) && $adminInfo->DPD) {
                     $query .= " AND ka.TUJUAN_SPESIFIK = ?";
                     $params[] = $adminInfo->DPD;
                 }
@@ -190,7 +214,7 @@ class AdminKonsultasiController extends Controller
             $komentar = DB::select("
                 SELECT 
                     kk.*,
-                    k.NAMA as responder_nama
+                    k.V_NAMA_KARYAWAN as responder_nama
                 FROM t_konsultasi_komentar kk
                 LEFT JOIN t_karyawan k ON kk.N_NIK_RESPONDER = k.N_NIK
                 WHERE kk.ID_KONSULTASI = ?
@@ -230,30 +254,32 @@ class AdminKonsultasiController extends Controller
                 ], 403);
             }
             
-            // Update status
-            $updateData = [
-                'STATUS' => $validated['status'],
-                'UPDATED_AT' => now(),
-            ];
-            
-            if ($validated['status'] === 'CLOSED') {
-                $updateData['CLOSED_AT'] = now();
-                $updateData['CLOSED_BY'] = $user->nik;
-            }
-            
-            DB::table('t_konsultasi_advokasi')
-              ->where('ID', $id)
-              ->update($updateData);
-            
-            // Add comment if provided
-            if (!empty($validated['catatan'])) {
-                DB::table('t_konsultasi_komentar')->insert([
-                    'ID_KONSULTASI' => $id,
-                    'N_NIK_RESPONDER' => $user->nik,
-                    'KOMENTAR' => "Status diubah menjadi {$validated['status']}. Catatan: {$validated['catatan']}",
-                    'CREATED_AT' => now(),
-                ]);
-            }
+            DB::transaction(function () use ($validated, $id, $user) {
+                // Update status
+                $updateData = [
+                    'STATUS' => $validated['status'],
+                    'UPDATED_AT' => now(),
+                ];
+                
+                if ($validated['status'] === 'CLOSED') {
+                    $updateData['CLOSED_AT'] = now();
+                    $updateData['CLOSED_BY'] = $user->nik;
+                }
+                
+                DB::table('t_konsultasi_advokasi')
+                  ->where('ID', $id)
+                  ->update($updateData);
+                
+                // Add comment jika ada catatan
+                if (!empty($validated['catatan'])) {
+                    DB::table('t_konsultasi_komentar')->insert([
+                        'ID_KONSULTASI' => $id,
+                        'N_NIK_RESPONDER' => $user->nik,
+                        'KOMENTAR' => "Status diubah menjadi {$validated['status']}. Catatan: {$validated['catatan']}",
+                        'CREATED_AT' => now(),
+                    ]);
+                }
+            });
             
             return response()->json([
                 'success' => true,
@@ -290,22 +316,24 @@ class AdminKonsultasiController extends Controller
                                ->with('error', 'Anda tidak memiliki akses untuk merespons konsultasi ini.');
             }
             
-            // Add response
-            DB::table('t_konsultasi_komentar')->insert([
-                'ID_KONSULTASI' => $id,
-                'N_NIK_RESPONDER' => $user->nik,
-                'KOMENTAR' => $validated['komentar'],
-                'CREATED_AT' => now(),
-            ]);
-            
-            // Update konsultasi status to IN_PROGRESS if still OPEN
-            DB::table('t_konsultasi_advokasi')
-              ->where('ID', $id)
-              ->where('STATUS', 'OPEN')
-              ->update([
-                  'STATUS' => 'IN_PROGRESS',
-                  'UPDATED_AT' => now(),
-              ]);
+            DB::transaction(function () use ($validated, $id, $user) {
+                // Add response
+                DB::table('t_konsultasi_komentar')->insert([
+                    'ID_KONSULTASI' => $id,
+                    'N_NIK_RESPONDER' => $user->nik,
+                    'KOMENTAR' => $validated['komentar'],
+                    'CREATED_AT' => now(),
+                ]);
+                
+                // Update konsultasi status to IN_PROGRESS jika masih OPEN
+                DB::table('t_konsultasi_advokasi')
+                  ->where('ID', $id)
+                  ->where('STATUS', 'OPEN')
+                  ->update([
+                      'STATUS' => 'IN_PROGRESS',
+                      'UPDATED_AT' => now(),
+                  ]);
+            });
             
             return redirect()->route('admin.konsultasi.show', $id)
                            ->with('success', 'Respons berhasil ditambahkan.');
@@ -319,14 +347,14 @@ class AdminKonsultasiController extends Controller
     }
     
     /**
-     * Delete konsultasi (admin only)
+     * Delete konsultasi (super admin only)
      */
     public function destroy($id)
     {
         $user = Auth::user();
         
         try {
-            // Only super admin can delete
+            // Only super admin dapat delete
             $adminData = DB::select("
                 SELECT sr.NAME as role_name
                 FROM t_sekar_pengurus sp
@@ -334,7 +362,7 @@ class AdminKonsultasiController extends Controller
                 WHERE sp.N_NIK = ?
             ", [$user->nik]);
             
-            $adminRole = $adminData[0]->role_name ?? null;
+            $adminRole = count($adminData) > 0 ? $adminData[0]->role_name : null;
             
             if ($adminRole !== 'ADM') {
                 return response()->json([
@@ -343,23 +371,22 @@ class AdminKonsultasiController extends Controller
                 ], 403);
             }
             
-            // Delete comments first
-            DB::table('t_konsultasi_komentar')->where('ID_KONSULTASI', $id)->delete();
+            DB::transaction(function () use ($id) {
+                // Delete comments first
+                DB::table('t_konsultasi_komentar')->where('ID_KONSULTASI', $id)->delete();
+                
+                // Delete konsultasi
+                $deleted = DB::table('t_konsultasi_advokasi')->where('ID', $id)->delete();
+                
+                if (!$deleted) {
+                    throw new \Exception('Konsultasi tidak ditemukan');
+                }
+            });
             
-            // Delete konsultasi
-            $deleted = DB::table('t_konsultasi_advokasi')->where('ID', $id)->delete();
-            
-            if ($deleted) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Konsultasi berhasil dihapus.'
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Konsultasi tidak ditemukan.'
-                ], 404);
-            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Konsultasi berhasil dihapus.'
+            ]);
             
         } catch (\Exception $e) {
             Log::error('Error deleting konsultasi: ' . $e->getMessage());
@@ -387,7 +414,7 @@ class AdminKonsultasiController extends Controller
                 WHERE sp.N_NIK = ?
             ", [$user->nik]);
             
-            $adminInfo = $adminData[0] ?? null;
+            $adminInfo = count($adminData) > 0 ? $adminData[0] : null;
             
             if (!$adminInfo) {
                 return false;
@@ -411,10 +438,10 @@ class AdminKonsultasiController extends Controller
             
             $tujuanSpesifik = $konsultasi[0]->TUJUAN_SPESIFIK;
             
-            // Check access based on role
-            if ($adminInfo->role_name === 'ADMIN_DPW' && $adminInfo->DPW) {
+            // Check access berdasarkan role
+            if ($adminInfo->role_name === 'ADMIN_DPW' && isset($adminInfo->DPW) && $adminInfo->DPW) {
                 return substr($tujuanSpesifik, 0, 5) === $adminInfo->DPW;
-            } elseif ($adminInfo->role_name === 'ADMIN_DPD' && $adminInfo->DPD) {
+            } elseif ($adminInfo->role_name === 'ADMIN_DPD' && isset($adminInfo->DPD) && $adminInfo->DPD) {
                 return $tujuanSpesifik === $adminInfo->DPD;
             }
             
@@ -432,32 +459,32 @@ class AdminKonsultasiController extends Controller
     private function getKonsultasiStats($adminInfo)
     {
         try {
-            $baseWhere = "";
+            $baseWhere = "1=1";
             $params = [];
             
-            if ($adminInfo && $adminInfo->role_name !== 'ADM') {
-                if ($adminInfo->role_name === 'ADMIN_DPW' && $adminInfo->DPW) {
-                    $baseWhere = " WHERE SUBSTRING(TUJUAN_SPESIFIK, 1, 5) = ?";
+            if ($adminInfo && isset($adminInfo->role_name) && $adminInfo->role_name !== 'ADM') {
+                if ($adminInfo->role_name === 'ADMIN_DPW' && isset($adminInfo->DPW) && $adminInfo->DPW) {
+                    $baseWhere .= " AND SUBSTRING(TUJUAN_SPESIFIK, 1, 5) = ?";
                     $params[] = $adminInfo->DPW;
-                } elseif ($adminInfo->role_name === 'ADMIN_DPD' && $adminInfo->DPD) {
-                    $baseWhere = " WHERE TUJUAN_SPESIFIK = ?";
+                } elseif ($adminInfo->role_name === 'ADMIN_DPD' && isset($adminInfo->DPD) && $adminInfo->DPD) {
+                    $baseWhere .= " AND TUJUAN_SPESIFIK = ?";
                     $params[] = $adminInfo->DPD;
                 }
             }
             
-            $total = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi" . $baseWhere, $params)[0]->count ?? 0;
+            $total = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere}", $params)[0]->count;
             
             $openParams = $params;
             $openParams[] = 'OPEN';
-            $open = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi" . ($baseWhere ? $baseWhere . " AND" : " WHERE") . " STATUS = ?", $openParams)[0]->count ?? 0;
+            $open = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $openParams)[0]->count;
             
             $progressParams = $params;
             $progressParams[] = 'IN_PROGRESS';
-            $inProgress = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi" . ($baseWhere ? $baseWhere . " AND" : " WHERE") . " STATUS = ?", $progressParams)[0]->count ?? 0;
+            $inProgress = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $progressParams)[0]->count;
             
             $closedParams = $params;
             $closedParams[] = 'CLOSED';
-            $closed = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi" . ($baseWhere ? $baseWhere . " AND" : " WHERE") . " STATUS = ?", $closedParams)[0]->count ?? 0;
+            $closed = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $closedParams)[0]->count;
             
             return [
                 'total' => $total,

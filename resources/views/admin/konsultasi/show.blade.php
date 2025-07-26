@@ -1,15 +1,16 @@
+{{-- resources/views/admin/konsultasi/show.blade.php --}}
 @extends('layouts.admin')
 
-@section('title', 'Detail Konsultasi #' . $konsultasiData->ID)
-@section('header', 'Detail Konsultasi #' . $konsultasiData->ID)
-@section('description', 'Kelola dan tanggapi konsultasi dari anggota')
+@section('title', 'Detail Konsultasi #' . $konsultasi->ID)
+@section('header', 'Detail Konsultasi #' . $konsultasi->ID)
+@section('description', 'Kelola dan tanggapi konsultasi dari anggota SEKAR')
 
 @section('content')
 <div class="space-y-6">
     <!-- Back Button -->
     <div class="flex items-center space-x-4">
         <a href="{{ route('admin.konsultasi.index') }}" 
-           class="flex items-center text-gray-600 hover:text-gray-800">
+           class="flex items-center text-gray-600 hover:text-gray-800 transition-colors">
             <i class="fas fa-arrow-left mr-2"></i>
             Kembali ke Daftar Konsultasi
         </a>
@@ -18,99 +19,109 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
-            <!-- Konsultasi Detail Card -->
-            <div class="admin-card rounded-xl shadow-lg">
+            <!-- Konsultasi Detail Card - Same style as user -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-800">Informasi Konsultasi</h3>
-                            <p class="text-gray-600 text-sm">ID: #{{ $konsultasiData->ID }}</p>
+                            <h3 class="text-lg font-semibold text-gray-900">{{ isset($konsultasi->JUDUL) ? $konsultasi->JUDUL : 'Detail Konsultasi' }}</h3>
+                            <p class="text-gray-600 text-sm">ID: #{{ $konsultasi->ID }}</p>
                         </div>
                         <div class="flex space-x-2">
-                            @switch($konsultasiData->STATUS)
-                                @case('OPEN')
-                                    <span class="status-badge bg-yellow-100 text-yellow-800">
-                                        <i class="fas fa-clock mr-1"></i>Menunggu Tanggapan
-                                    </span>
-                                    @break
-                                @case('IN_PROGRESS')
-                                    <span class="status-badge bg-purple-100 text-purple-800">
-                                        <i class="fas fa-spinner mr-1"></i>Sedang Diproses
-                                    </span>
-                                    @break
-                                @case('CLOSED')
-                                    <span class="status-badge bg-green-100 text-green-800">
-                                        <i class="fas fa-check mr-1"></i>Selesai
-                                    </span>
-                                    @break
-                            @endswitch
+                            @php
+                                $status = isset($konsultasi->STATUS) ? $konsultasi->STATUS : 'UNKNOWN';
+                                $statusConfig = match($status) {
+                                    'OPEN' => ['class' => 'bg-yellow-100 text-yellow-800', 'icon' => 'fa-clock', 'text' => 'Menunggu Tanggapan'],
+                                    'IN_PROGRESS' => ['class' => 'bg-purple-100 text-purple-800', 'icon' => 'fa-spinner', 'text' => 'Sedang Diproses'],
+                                    'CLOSED' => ['class' => 'bg-green-100 text-green-800', 'icon' => 'fa-check-circle', 'text' => 'Selesai'],
+                                    default => ['class' => 'bg-gray-100 text-gray-800', 'icon' => 'fa-question', 'text' => 'Unknown']
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $statusConfig['class'] }}">
+                                <i class="fas {{ $statusConfig['icon'] }} mr-1"></i>{{ $statusConfig['text'] }}
+                            </span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="p-6 space-y-4">
+                    <!-- Jenis & Kategori -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Jenis</label>
-                            <div class="flex items-center">
-                                @if($konsultasiData->JENIS === 'ADVOKASI')
-                                    <span class="status-badge bg-red-100 text-red-800">{{ $konsultasiData->JENIS }}</span>
-                                @else
-                                    <span class="status-badge bg-blue-100 text-blue-800">{{ $konsultasiData->JENIS }}</span>
-                                @endif
-                                @if($konsultasiData->KATEGORI_ADVOKASI)
-                                <span class="ml-2 text-sm text-gray-600">{{ $konsultasiData->KATEGORI_ADVOKASI }}</span>
-                                @endif
-                            </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                            @php
+                                $jenis = isset($konsultasi->JENIS) ? $konsultasi->JENIS : 'N/A';
+                                $jenisClass = match($jenis) {
+                                    'ADVOKASI' => 'bg-red-100 text-red-800',
+                                    'ASPIRASI' => 'bg-blue-100 text-blue-800',
+                                    default => 'bg-gray-100 text-gray-800'
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $jenisClass }}">
+                                {{ $jenis }}
+                            </span>
                         </div>
                         
+                        @if(isset($konsultasi->KATEGORI_ADVOKASI) && $konsultasi->KATEGORI_ADVOKASI)
                         <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Tujuan</label>
-                            <div>
-                                <span class="status-badge bg-gray-100 text-gray-800">{{ $konsultasiData->TUJUAN }}</span>
-                                @if($konsultasiData->TUJUAN_SPESIFIK)
-                                <div class="text-sm text-gray-600 mt-1">{{ $konsultasiData->TUJUAN_SPESIFIK }}</div>
-                                @endif
-                            </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kategori Advokasi</label>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                {{ $konsultasi->KATEGORI_ADVOKASI }}
+                            </span>
                         </div>
+                        @endif
                     </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Judul</label>
-                        <h4 class="text-lg font-medium text-gray-900">{{ $konsultasiData->JUDUL }}</h4>
+
+                    <!-- Tujuan -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tujuan</label>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                {{ isset($konsultasi->TUJUAN) ? $konsultasi->TUJUAN : 'N/A' }}
+                            </span>
+                        </div>
+                        
+                        @if(isset($konsultasi->TUJUAN_SPESIFIK) && $konsultasi->TUJUAN_SPESIFIK)
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tujuan Spesifik</label>
+                            <p class="text-gray-900">{{ $konsultasi->TUJUAN_SPESIFIK }}</p>
+                        </div>
+                        @endif
                     </div>
-                    
+
+                    <!-- Deskripsi -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Deskripsi</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Deskripsi</label>
                         <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-gray-700">{{ $konsultasiData->DESKRIPSI }}</p>
+                            <p class="text-gray-900 whitespace-pre-wrap">{{ isset($konsultasi->DESKRIPSI) ? $konsultasi->DESKRIPSI : 'Tidak ada deskripsi' }}</p>
                         </div>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- Timestamps -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                         <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Tanggal Dibuat</label>
-                            <p class="text-gray-900">{{ \Carbon\Carbon::parse($konsultasiData->CREATED_AT)->format('d/m/Y H:i:s') }}</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Dibuat</label>
+                            <p class="text-gray-900">{{ isset($konsultasi->CREATED_AT) ? date('d/m/Y H:i:s', strtotime($konsultasi->CREATED_AT)) : 'N/A' }}</p>
                         </div>
                         
-                        @if($konsultasiData->UPDATED_AT && $konsultasiData->UPDATED_AT != $konsultasiData->CREATED_AT)
+                        @if(isset($konsultasi->UPDATED_AT) && $konsultasi->UPDATED_AT)
                         <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Terakhir Diperbarui</label>
-                            <p class="text-gray-900">{{ \Carbon\Carbon::parse($konsultasiData->UPDATED_AT)->format('d/m/Y H:i:s') }}</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Terakhir Diupdate</label>
+                            <p class="text-gray-900">{{ date('d/m/Y H:i:s', strtotime($konsultasi->UPDATED_AT)) }}</p>
                         </div>
                         @endif
                     </div>
                     
-                    @if($konsultasiData->CLOSED_AT)
+                    @if(isset($konsultasi->CLOSED_AT) && $konsultasi->CLOSED_AT)
                     <div class="bg-green-50 p-4 rounded-lg">
                         <div class="flex items-center">
                             <i class="fas fa-check-circle text-green-600 mr-2"></i>
                             <div>
                                 <p class="text-green-800 font-medium">Konsultasi Ditutup</p>
                                 <p class="text-green-700 text-sm">
-                                    {{ \Carbon\Carbon::parse($konsultasiData->CLOSED_AT)->format('d/m/Y H:i:s') }}
-                                    @if($konsultasiData->CLOSED_BY)
-                                    oleh {{ $konsultasiData->CLOSED_BY }}
+                                    {{ date('d/m/Y H:i:s', strtotime($konsultasi->CLOSED_AT)) }}
+                                    @if(isset($konsultasi->CLOSED_BY) && $konsultasi->CLOSED_BY)
+                                    oleh {{ $konsultasi->CLOSED_BY }}
                                     @endif
                                 </p>
                             </div>
@@ -120,23 +131,28 @@
                 </div>
             </div>
 
-            <!-- Comments Section -->
-            <div class="admin-card rounded-xl shadow-lg">
+            <!-- Comments Section - Same style as user -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">
+                    <h3 class="text-lg font-semibold text-gray-900">
                         <i class="fas fa-comments mr-2"></i>
-                        Diskusi & Tanggapan ({{ count($comments) }})
+                        Diskusi & Tanggapan ({{ count($komentar) }})
                     </h3>
                 </div>
                 
                 <div class="p-6">
-                    @if(count($comments) > 0)
+                    @if(count($komentar) > 0)
                     <div class="space-y-4">
-                        @foreach($comments as $comment)
-                        <div class="flex space-x-4 {{ $comment->PENGIRIM_ROLE === 'ADMIN' ? 'bg-blue-50' : 'bg-gray-50' }} p-4 rounded-lg">
+                        @foreach($komentar as $comment)
+                        @php
+                            $isAdmin = (isset($comment->N_NIK_RESPONDER) && $comment->N_NIK_RESPONDER === Auth::user()->nik) ||
+                                      str_contains(strtolower($comment->KOMENTAR), 'admin') ||
+                                      str_contains(strtolower($comment->KOMENTAR), 'status diubah');
+                        @endphp
+                        <div class="flex space-x-4 {{ $isAdmin ? 'bg-blue-50' : 'bg-gray-50' }} p-4 rounded-lg">
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 {{ $comment->PENGIRIM_ROLE === 'ADMIN' ? 'bg-blue-500' : 'bg-gray-500' }} rounded-full flex items-center justify-center">
-                                    @if($comment->PENGIRIM_ROLE === 'ADMIN')
+                                <div class="w-10 h-10 {{ $isAdmin ? 'bg-blue-500' : 'bg-gray-500' }} rounded-full flex items-center justify-center">
+                                    @if($isAdmin)
                                         <i class="fas fa-user-shield text-white"></i>
                                     @else
                                         <i class="fas fa-user text-white"></i>
@@ -146,16 +162,20 @@
                             <div class="flex-1">
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="flex items-center space-x-2">
-                                        <h5 class="font-medium text-gray-900">{{ $comment->nama_pengirim ?? $comment->N_NIK }}</h5>
-                                        @if($comment->PENGIRIM_ROLE === 'ADMIN')
-                                        <span class="status-badge bg-blue-100 text-blue-800">Admin</span>
+                                        <h5 class="font-medium text-gray-900">
+                                            {{ isset($comment->responder_nama) ? $comment->responder_nama : (isset($comment->N_NIK_RESPONDER) ? $comment->N_NIK_RESPONDER : 'Unknown') }}
+                                        </h5>
+                                        @if($isAdmin)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                            <i class="fas fa-shield-alt mr-1"></i>Admin
+                                        </span>
                                         @endif
                                     </div>
                                     <span class="text-sm text-gray-500">
-                                        {{ \Carbon\Carbon::parse($comment->CREATED_AT)->format('d/m/Y H:i') }}
+                                        {{ isset($comment->CREATED_AT) ? date('d/m/Y H:i', strtotime($comment->CREATED_AT)) : 'N/A' }}
                                     </span>
                                 </div>
-                                <p class="text-gray-700">{{ $comment->KOMENTAR }}</p>
+                                <p class="text-gray-700">{{ isset($comment->KOMENTAR) ? $comment->KOMENTAR : 'No comment' }}</p>
                             </div>
                         </div>
                         @endforeach
@@ -164,27 +184,38 @@
                     <div class="text-center py-8">
                         <i class="fas fa-comments fa-3x text-gray-300 mb-4"></i>
                         <p class="text-gray-500">Belum ada komentar atau tanggapan</p>
+                        <p class="text-gray-400 text-sm">Mulai diskusi dengan menambahkan tanggapan sebagai admin</p>
                     </div>
                     @endif
                     
-                    @if($konsultasiData->STATUS !== 'CLOSED')
+                    @if($status !== 'CLOSED')
                     <!-- Add Comment Form -->
                     <div class="mt-6 pt-6 border-t border-gray-200">
                         <h4 class="font-medium text-gray-900 mb-4">Tambah Tanggapan Admin</h4>
-                        <form action="{{ route('admin.konsultasi.comment', $konsultasiData->ID) }}" method="POST">
+                        <form action="{{ route('admin.konsultasi.addResponse', $konsultasi->ID) }}" method="POST">
                             @csrf
                             <div class="space-y-4">
                                 <textarea name="komentar" rows="4" 
-                                          class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+                                          class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                                           placeholder="Tulis tanggapan Anda sebagai admin..." required></textarea>
-                                <div class="flex justify-end">
+                                <div class="flex justify-between items-center">
+                                    <p class="text-xs text-gray-500">Tanggapan akan mengubah status menjadi "Sedang Diproses" jika masih "Menunggu"</p>
                                     <button type="submit" 
-                                            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500">
+                                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 transition-colors">
                                         <i class="fas fa-paper-plane mr-2"></i>Kirim Tanggapan
                                     </button>
                                 </div>
                             </div>
                         </form>
+                    </div>
+                    @else
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <p class="text-gray-600 text-sm">
+                                <i class="fas fa-lock mr-2"></i>
+                                Konsultasi ini telah ditutup. Tidak dapat menambahkan tanggapan baru.
+                            </p>
+                        </div>
                     </div>
                     @endif
                 </div>
@@ -192,224 +223,238 @@
         </div>
 
         <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- User Info Card -->
-            <div class="admin-card rounded-xl shadow-lg">
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Pengaju Info Card - Same style as user -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">Informasi Pengaju</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Informasi Pengaju</h3>
                 </div>
                 <div class="p-6">
-                    <div class="text-center mb-4">
-                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-purple-600 text-xl font-bold">
-                                {{ substr($konsultasiData->nama_pengaju ?? 'U', 0, 1) }}
-                            </span>
+                    @if(isset($konsultasi->pengaju_nama))
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-blue-600 font-semibold">{{ substr($konsultasi->pengaju_nama, 0, 2) }}</span>
                         </div>
-                        <h4 class="font-semibold text-gray-900">{{ $konsultasiData->nama_pengaju ?? 'Unknown' }}</h4>
-                        <p class="text-gray-600 text-sm">{{ $konsultasiData->N_NIK }}</p>
+                        <div>
+                            <p class="font-medium text-gray-900">{{ $konsultasi->pengaju_nama }}</p>
+                            <p class="text-sm text-gray-600">{{ isset($konsultasi->pengaju_nik) ? $konsultasi->pengaju_nik : 'N/A' }}</p>
+                        </div>
                     </div>
+                    @endif
                     
-                    <div class="space-y-3 text-sm">
-                        @if($konsultasiData->jabatan_pengaju)
-                        <div>
-                            <span class="text-gray-500">Jabatan:</span>
-                            <p class="font-medium">{{ $konsultasiData->jabatan_pengaju }}</p>
+                    <div class="space-y-3">
+                        @if(isset($konsultasi->pengaju_email))
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">Email:</span>
+                            <span class="font-medium text-gray-900">{{ $konsultasi->pengaju_email }}</span>
                         </div>
                         @endif
                         
-                        @if($konsultasiData->unit_pengaju)
-                        <div>
-                            <span class="text-gray-500">Unit Kerja:</span>
-                            <p class="font-medium">{{ $konsultasiData->unit_pengaju }}</p>
+                        @if(isset($konsultasi->pengaju_lokasi))
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">Lokasi:</span>
+                            <span class="font-medium text-gray-900">{{ $konsultasi->pengaju_lokasi }}</span>
                         </div>
                         @endif
                         
-                        @if($konsultasiData->lokasi_pengaju)
-                        <div>
-                            <span class="text-gray-500">Lokasi:</span>
-                            <p class="font-medium">{{ $konsultasiData->lokasi_pengaju }}</p>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600">NIK:</span>
+                            <span class="font-medium text-gray-900">{{ isset($konsultasi->N_NIK_PENGAJU) ? $konsultasi->N_NIK_PENGAJU : 'N/A' }}</span>
                         </div>
-                        @endif
-                        
-                        @if($konsultasiData->no_hp_pengaju)
-                        <div>
-                            <span class="text-gray-500">No. HP:</span>
-                            <p class="font-medium">{{ $konsultasiData->no_hp_pengaju }}</p>
-                        </div>
-                        @endif
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Actions Card -->
-            @if($konsultasiData->STATUS !== 'CLOSED')
-            <div class="admin-card rounded-xl shadow-lg">
+            <!-- Admin Actions Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">Tindakan Cepat</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Aksi Admin</h3>
                 </div>
                 <div class="p-6 space-y-3">
-                    <button onclick="showCloseModal()" 
-                            class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500">
+                    @if($status !== 'CLOSED')
+                    <!-- Status Change Actions -->
+                    @if($status === 'OPEN')
+                    <button onclick="updateStatus('IN_PROGRESS')" 
+                            class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-play mr-2"></i>Mulai Proses
+                    </button>
+                    @endif
+                    
+                    @if($status === 'IN_PROGRESS')
+                    <button onclick="updateStatus('OPEN')" 
+                            class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                        <i class="fas fa-undo mr-2"></i>Kembalikan ke Menunggu
+                    </button>
+                    @endif
+                    
+                    <button onclick="closeKonsultasi()" 
+                            class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-check mr-2"></i>Tutup Konsultasi
                     </button>
+                    @endif
                     
-                    <button onclick="showEscalateModal()" 
-                            class="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500">
-                        <i class="fas fa-arrow-up mr-2"></i>Eskalasi ke Level Atas
+                    <!-- Always available actions -->
+                    <button onclick="printKonsultasi()" 
+                            class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i>Cetak Detail
                     </button>
+                    
+                    @if($adminInfo && isset($adminInfo->role_name) && $adminInfo->role_name === 'ADM')
+                    <button onclick="deleteKonsultasi()" 
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Hapus Konsultasi
+                    </button>
+                    @endif
                 </div>
             </div>
-            @endif
 
-            <!-- Statistics Card -->
-            <div class="admin-card rounded-xl shadow-lg">
+            <!-- Timeline Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">Statistik Konsultasi</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Timeline</h3>
                 </div>
                 <div class="p-6">
-                    <div class="grid grid-cols-2 gap-4 text-center">
-                        <div>
-                            <div class="text-2xl font-bold text-purple-600">{{ count($comments) }}</div>
-                            <div class="text-sm text-gray-500">Total Komentar</div>
-                        </div>
-                        <div>
-                            <div class="text-2xl font-bold text-blue-600">
-                                {{ count(array_filter($comments, fn($c) => $c->PENGIRIM_ROLE === 'ADMIN')) }}
-                            </div>
-                            <div class="text-sm text-gray-500">Tanggapan Admin</div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 pt-4 border-t border-gray-200 text-center">
-                        <div class="text-sm text-gray-500 mb-1">Durasi Konsultasi</div>
-                        <div class="font-medium text-gray-900">
-                            @if($konsultasiData->STATUS === 'CLOSED' && $konsultasiData->CLOSED_AT)
-                                {{ \Carbon\Carbon::parse($konsultasiData->CREATED_AT)->diffInDays(\Carbon\Carbon::parse($konsultasiData->CLOSED_AT)) }} hari
-                            @else
-                                {{ \Carbon\Carbon::parse($konsultasiData->CREATED_AT)->diffInDays(now()) }} hari (berlangsung)
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Close Modal -->
-<div id="closeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div class="p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Tutup Konsultasi</h3>
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <div class="flex">
-                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-3 mt-0.5"></i>
-                        <p class="text-yellow-800 text-sm">
-                            Setelah ditutup, konsultasi tidak dapat dibuka kembali dan user tidak dapat menambahkan komentar.
-                        </p>
-                    </div>
-                </div>
-                <form action="{{ route('admin.konsultasi.close', $konsultasiData->ID) }}" method="POST">
-                    @csrf
-                    <textarea name="closing_note" rows="4" 
-                              class="w-full border border-gray-300 rounded-lg p-3 mb-4" 
-                              placeholder="Tambahkan ringkasan penyelesaian atau catatan penutupan..."></textarea>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="hideCloseModal()" 
-                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                            Batal
-                        </button>
-                        <button type="submit" 
-                                class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">
-                            <i class="fas fa-check mr-2"></i>Tutup Konsultasi
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Escalate Modal -->
-<div id="escalateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div class="p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Eskalasi Konsultasi</h3>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div class="flex">
-                        <i class="fas fa-info-circle text-blue-400 mr-3 mt-0.5"></i>
-                        <p class="text-blue-800 text-sm">
-                            Eskalasi akan memindahkan konsultasi ke level yang lebih tinggi untuk penanganan lebih lanjut.
-                        </p>
-                    </div>
-                </div>
-                <form action="{{ route('admin.konsultasi.escalate', $konsultasiData->ID) }}" method="POST">
-                    @csrf
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Eskalasi Ke</label>
-                            <select name="escalate_to" class="w-full border border-gray-300 rounded-lg p-3" required>
-                                <option value="">Pilih Level Eskalasi</option>
-                                <option value="DPW">DPW (Dewan Pengurus Wilayah)</option>
-                                <option value="DPP">DPP (Dewan Pengurus Pusat)</option>
-                            </select>
+                        <!-- Created -->
+                        <div class="flex items-start space-x-3">
+                            <div class="w-3 h-3 bg-blue-500 rounded-full mt-2"></div>
+                            <div>
+                                <p class="font-medium text-gray-900">Konsultasi Dibuat</p>
+                                <p class="text-sm text-gray-600">{{ isset($konsultasi->CREATED_AT) ? date('d/m/Y H:i', strtotime($konsultasi->CREATED_AT)) : 'N/A' }}</p>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Alasan Eskalasi</label>
-                            <textarea name="escalation_note" rows="4" 
-                                      class="w-full border border-gray-300 rounded-lg p-3" 
-                                      placeholder="Jelaskan mengapa konsultasi ini perlu dieskalasi ke level yang lebih tinggi..." required></textarea>
+                        
+                        @if(isset($konsultasi->UPDATED_AT) && $konsultasi->UPDATED_AT !== $konsultasi->CREATED_AT)
+                        <!-- Updated -->
+                        <div class="flex items-start space-x-3">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mt-2"></div>
+                            <div>
+                                <p class="font-medium text-gray-900">Terakhir Diupdate</p>
+                                <p class="text-sm text-gray-600">{{ date('d/m/Y H:i', strtotime($konsultasi->UPDATED_AT)) }}</p>
+                            </div>
                         </div>
+                        @endif
+                        
+                        @if(isset($konsultasi->CLOSED_AT) && $konsultasi->CLOSED_AT)
+                        <!-- Closed -->
+                        <div class="flex items-start space-x-3">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mt-2"></div>
+                            <div>
+                                <p class="font-medium text-gray-900">Konsultasi Ditutup</p>
+                                <p class="text-sm text-gray-600">{{ date('d/m/Y H:i', strtotime($konsultasi->CLOSED_AT)) }}</p>
+                            </div>
+                        </div>
+                        @endif
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" onclick="hideEscalateModal()" 
-                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                            Batal
-                        </button>
-                        <button type="submit" 
-                                class="px-4 py-2 text-white bg-yellow-600 rounded-lg hover:bg-yellow-700">
-                            <i class="fas fa-arrow-up mr-2"></i>Eskalasi
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-@endsection
-
-@push('scripts')
+<!-- JavaScript Functions -->
 <script>
-function showCloseModal() {
-    document.getElementById('closeModal').classList.remove('hidden');
-}
-
-function hideCloseModal() {
-    document.getElementById('closeModal').classList.add('hidden');
-}
-
-function showEscalateModal() {
-    document.getElementById('escalateModal').classList.remove('hidden');
-}
-
-function hideEscalateModal() {
-    document.getElementById('escalateModal').classList.add('hidden');
-}
-
-// Close modals when clicking outside
-document.getElementById('closeModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideCloseModal();
+function updateStatus(newStatus) {
+    const statusText = {
+        'OPEN': 'Menunggu Tanggapan',
+        'IN_PROGRESS': 'Sedang Diproses',
+        'CLOSED': 'Ditutup'
+    };
+    
+    if (confirm(`Apakah Anda yakin ingin mengubah status menjadi "${statusText[newStatus]}"?`)) {
+        fetch(`{{ route('admin.konsultasi.updateStatus', $konsultasi->ID) }}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                status: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Gagal mengubah status: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mengubah status');
+        });
     }
-});
+}
 
-document.getElementById('escalateModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideEscalateModal();
+function closeKonsultasi() {
+    const catatan = prompt('Masukkan catatan penutupan (opsional):');
+    
+    if (catatan !== null) { // User didn't cancel
+        fetch(`{{ route('admin.konsultasi.updateStatus', $konsultasi->ID) }}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                status: 'CLOSED',
+                catatan: catatan
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Gagal menutup konsultasi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menutup konsultasi');
+        });
     }
-});
+}
+
+function printKonsultasi() {
+    window.print();
+}
+
+function deleteKonsultasi() {
+    if (confirm('PERINGATAN: Apakah Anda yakin ingin menghapus konsultasi ini? Aksi ini tidak dapat dibatalkan!')) {
+        fetch(`{{ route('admin.konsultasi.destroy', $konsultasi->ID) }}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Konsultasi berhasil dihapus');
+                window.location.href = '{{ route("admin.konsultasi.index") }}';
+            } else {
+                alert('Gagal menghapus konsultasi: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menghapus konsultasi');
+        });
+    }
+}
 </script>
+
+@push('styles')
+<style>
+@media print {
+    .no-print { display: none !important; }
+    body { background: white !important; }
+    .bg-white { background: white !important; }
+    .shadow-sm { box-shadow: none !important; }
+}
+</style>
 @endpush
+@endsection

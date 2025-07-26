@@ -1,306 +1,396 @@
+{{-- resources/views/admin/konsultasi/index.blade.php --}}
 @extends('layouts.admin')
 
-@section('title', 'Manajemen Konsultasi')
-@section('header', 'Manajemen Konsultasi & Aspirasi')
-@section('description', 'Kelola semua pengajuan advokasi dan aspirasi anggota')
+@section('title', 'Kelola Konsultasi')
+@section('header', 'Kelola Konsultasi & Aspirasi')
+@section('description', 'Manage dan tanggapi konsultasi dari anggota SEKAR')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Statistics Summary -->
+    <!-- Statistics Cards - Same style as dashboard -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="admin-card rounded-lg shadow p-4">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-comments text-blue-600"></i>
-                </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm">Total</p>
-                    <p class="text-xl font-bold">{{ $stats['total'] }}</p>
+                    <p class="text-gray-600 text-xs font-medium uppercase tracking-wide">Total Konsultasi</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format(isset($stats['total']) ? $stats['total'] : 0) }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-comments text-blue-600 text-xl"></i>
                 </div>
             </div>
         </div>
         
-        <div class="admin-card rounded-lg shadow p-4">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-clock text-yellow-600"></i>
-                </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm">Menunggu</p>
-                    <p class="text-xl font-bold">{{ $stats['open'] }}</p>
+                    <p class="text-gray-600 text-xs font-medium uppercase tracking-wide">Menunggu Tanggapan</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ number_format(isset($stats['open']) ? $stats['open'] : 0) }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 text-xl"></i>
                 </div>
             </div>
         </div>
         
-        <div class="admin-card rounded-lg shadow p-4">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-spinner text-purple-600"></i>
-                </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm">Diproses</p>
-                    <p class="text-xl font-bold">{{ $stats['in_progress'] }}</p>
+                    <p class="text-gray-600 text-xs font-medium uppercase tracking-wide">Sedang Diproses</p>
+                    <p class="text-2xl font-bold text-purple-600 mt-1">{{ number_format(isset($stats['in_progress']) ? $stats['in_progress'] : 0) }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-spinner text-purple-600 text-xl"></i>
                 </div>
             </div>
         </div>
         
-        <div class="admin-card rounded-lg shadow p-4">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <i class="fas fa-check-circle text-green-600"></i>
-                </div>
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm">Selesai</p>
-                    <p class="text-xl font-bold">{{ $stats['closed'] }}</p>
+                    <p class="text-gray-600 text-xs font-medium uppercase tracking-wide">Selesai</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">{{ number_format(isset($stats['closed']) ? $stats['closed'] : 0) }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Filters and Actions -->
-    <div class="admin-card rounded-xl shadow-lg p-6">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.konsultasi.index') }}" 
-                   class="px-4 py-2 text-sm rounded-lg {{ !request('status') ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                    Semua
-                </a>
-                <a href="{{ route('admin.konsultasi.index') }}?status=OPEN" 
-                   class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'OPEN' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                    Menunggu
-                </a>
-                <a href="{{ route('admin.konsultasi.index') }}?status=IN_PROGRESS" 
-                   class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'IN_PROGRESS' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                    Diproses
-                </a>
-                <a href="{{ route('admin.konsultasi.index') }}?status=CLOSED" 
-                   class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'CLOSED' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
-                    Selesai
-                </a>
+
+    <!-- Filter and Search - Same style as user -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+        <form method="GET" action="{{ route('admin.konsultasi.index') }}" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Pencarian</label>
+                    <input type="text" 
+                           name="search" 
+                           id="search"
+                           placeholder="Cari judul, deskripsi, atau nama..."
+                           value="{{ request('search') }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Semua Status</option>
+                        <option value="OPEN" {{ request('status') === 'OPEN' ? 'selected' : '' }}>Menunggu Tanggapan</option>
+                        <option value="IN_PROGRESS" {{ request('status') === 'IN_PROGRESS' ? 'selected' : '' }}>Sedang Diproses</option>
+                        <option value="CLOSED" {{ request('status') === 'CLOSED' ? 'selected' : '' }}>Selesai</option>
+                    </select>
+                </div>
+
+                <!-- Jenis Filter -->
+                <div>
+                    <label for="jenis" class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                    <select name="jenis" id="jenis" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Semua Jenis</option>
+                        <option value="ADVOKASI" {{ request('jenis') === 'ADVOKASI' ? 'selected' : '' }}>Advokasi</option>
+                        <option value="ASPIRASI" {{ request('jenis') === 'ASPIRASI' ? 'selected' : '' }}>Aspirasi</option>
+                    </select>
+                </div>
+
+                <!-- Tujuan Filter -->
+                <div>
+                    <label for="tujuan" class="block text-sm font-medium text-gray-700 mb-1">Tujuan</label>
+                    <select name="tujuan" id="tujuan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Semua Tujuan</option>
+                        <option value="DPD" {{ request('tujuan') === 'DPD' ? 'selected' : '' }}>DPD</option>
+                        <option value="DPW" {{ request('tujuan') === 'DPW' ? 'selected' : '' }}>DPW</option>
+                        <option value="DPP" {{ request('tujuan') === 'DPP' ? 'selected' : '' }}>DPP</option>
+                    </select>
+                </div>
             </div>
-            
-            <div class="flex gap-2">
-                <button onclick="refreshData()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                    <i class="fas fa-sync-alt mr-2"></i>Refresh
-                </button>
-                <button onclick="exportData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    <i class="fas fa-download mr-2"></i>Export
-                </button>
+
+            <div class="flex items-center justify-between">
+                <div class="flex gap-2">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                        <i class="fas fa-search mr-2"></i>Filter
+                    </button>
+                    <a href="{{ route('admin.konsultasi.index') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center">
+                        <i class="fas fa-times mr-2"></i>Reset
+                    </a>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" onclick="refreshData()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    <button type="button" onclick="exportData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                </div>
             </div>
+        </form>
+    </div>
+
+    <!-- Quick Filter Buttons - Same style as user -->
+    <div class="flex items-center justify-between">
+        <div class="flex gap-2">
+            <a href="{{ route('admin.konsultasi.index') }}" 
+               class="px-4 py-2 text-sm rounded-lg {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Semua
+            </a>
+            <a href="{{ route('admin.konsultasi.index') }}?status=OPEN" 
+               class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'OPEN' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Menunggu
+            </a>
+            <a href="{{ route('admin.konsultasi.index') }}?status=IN_PROGRESS" 
+               class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'IN_PROGRESS' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Diproses
+            </a>
+            <a href="{{ route('admin.konsultasi.index') }}?status=CLOSED" 
+               class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'CLOSED' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                Selesai
+            </a>
         </div>
+
+        @if($adminInfo && isset($adminInfo->role_name))
+        <div class="text-sm text-gray-600">
+            <i class="fas fa-shield-alt mr-1"></i>
+            Access Level: <span class="font-medium text-red-600">{{ $adminInfo->role_name }}</span>
+        </div>
+        @endif
     </div>
     
-    <!-- Konsultasi Table -->
-    <div class="admin-card rounded-xl shadow-lg overflow-hidden">
+    <!-- Konsultasi Table - Same style as user tables -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        @if($konsultasi && $konsultasi->count() > 0)
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengaju</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tujuan</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Komentar</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Pengaju</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Jenis</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Judul</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Tujuan</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Status</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Komentar</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Tanggal</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700 text-xs border-b uppercase tracking-wide">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($konsultasiList as $item)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tbody class="divide-y divide-gray-200">
+                    @foreach($konsultasi as $item)
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-3 px-4 text-xs font-medium text-gray-900">
                             #{{ $item->ID }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="py-3 px-4 text-xs">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                                    <span class="text-purple-600 text-xs font-semibold">
-                                        {{ substr($item->nama_pengaju ?? 'U', 0, 1) }}
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-blue-600 text-xs font-semibold">
+                                        {{ isset($item->pengaju_nama) ? substr($item->pengaju_nama, 0, 2) : 'N/A' }}
                                     </span>
                                 </div>
                                 <div>
-                                    <div class="text-sm font-medium text-gray-900">{{ $item->nama_pengaju ?? 'Unknown' }}</div>
-                                    <div class="text-sm text-gray-500">{{ $item->N_NIK }}</div>
-                                    @if($item->lokasi_pengaju)
-                                    <div class="text-xs text-gray-400">{{ $item->lokasi_pengaju }}</div>
+                                    <div class="font-medium text-gray-900">{{ isset($item->pengaju_nama) ? $item->pengaju_nama : 'N/A' }}</div>
+                                    <div class="text-gray-500">{{ isset($item->pengaju_nik) ? $item->pengaju_nik : 'N/A' }}</div>
+                                    @if(isset($item->pengaju_lokasi))
+                                    <div class="text-gray-400 text-xs">{{ $item->pengaju_lokasi }}</div>
                                     @endif
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @if($item->JENIS === 'ADVOKASI')
-                                <span class="status-badge bg-red-100 text-red-800">{{ $item->JENIS }}</span>
-                                @if($item->KATEGORI_ADVOKASI)
-                                <div class="text-xs text-gray-500 mt-1">{{ Str::limit($item->KATEGORI_ADVOKASI, 20) }}</div>
-                                @endif
-                            @else
-                                <span class="status-badge bg-blue-100 text-blue-800">{{ $item->JENIS }}</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-medium text-gray-900">{{ Str::limit($item->JUDUL, 40) }}</div>
-                            <div class="text-xs text-gray-500 mt-1">{{ Str::limit($item->DESKRIPSI, 60) }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="status-badge bg-gray-100 text-gray-800">{{ $item->TUJUAN }}</span>
-                            @if($item->TUJUAN_SPESIFIK)
-                            <div class="text-xs text-gray-500 mt-1">{{ $item->TUJUAN_SPESIFIK }}</div>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @switch($item->STATUS)
-                                @case('OPEN')
-                                    <span class="status-badge bg-yellow-100 text-yellow-800">
-                                        <i class="fas fa-clock mr-1"></i>Menunggu
-                                    </span>
-                                    @break
-                                @case('IN_PROGRESS')
-                                    <span class="status-badge bg-purple-100 text-purple-800">
-                                        <i class="fas fa-spinner mr-1"></i>Diproses
-                                    </span>
-                                    @break
-                                @case('CLOSED')
-                                    <span class="status-badge bg-green-100 text-green-800">
-                                        <i class="fas fa-check mr-1"></i>Selesai
-                                    </span>
-                                    @break
-                            @endswitch
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="status-badge bg-gray-100 text-gray-800">
-                                <i class="fas fa-comments mr-1"></i>{{ $item->comment_count ?? 0 }}
+                        <td class="py-3 px-4 text-xs">
+                            @php
+                                $jenis = isset($item->JENIS) ? $item->JENIS : 'N/A';
+                                $jenisClass = match($jenis) {
+                                    'ADVOKASI' => 'bg-red-100 text-red-800',
+                                    'ASPIRASI' => 'bg-blue-100 text-blue-800',
+                                    default => 'bg-gray-100 text-gray-800'
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $jenisClass }}">
+                                {{ $jenis }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ \Carbon\Carbon::parse($item->CREATED_AT)->format('d/m/Y') }}
-                            <div class="text-xs">{{ \Carbon\Carbon::parse($item->CREATED_AT)->format('H:i') }}</div>
+                        <td class="py-3 px-4 text-xs">
+                            <div class="max-w-xs">
+                                <div class="font-medium text-gray-900 truncate">
+                                    {{ isset($item->JUDUL) ? $item->JUDUL : 'N/A' }}
+                                </div>
+                                @if(isset($item->KATEGORI_ADVOKASI) && $item->KATEGORI_ADVOKASI)
+                                <div class="text-gray-500 text-xs">{{ $item->KATEGORI_ADVOKASI }}</div>
+                                @endif
+                            </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
+                        <td class="py-3 px-4 text-xs">
+                            <div>
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    {{ isset($item->TUJUAN) ? $item->TUJUAN : 'N/A' }}
+                                </span>
+                                @if(isset($item->TUJUAN_SPESIFIK))
+                                <div class="text-gray-500 text-xs mt-1">{{ $item->TUJUAN_SPESIFIK }}</div>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-xs">
+                            @php
+                                $status = isset($item->STATUS) ? $item->STATUS : 'UNKNOWN';
+                                $statusClass = match($status) {
+                                    'OPEN' => 'bg-yellow-100 text-yellow-800',
+                                    'IN_PROGRESS' => 'bg-purple-100 text-purple-800',
+                                    'CLOSED' => 'bg-green-100 text-green-800',
+                                    default => 'bg-gray-100 text-gray-800'
+                                };
+                                $statusText = match($status) {
+                                    'OPEN' => 'Menunggu',
+                                    'IN_PROGRESS' => 'Diproses',
+                                    'CLOSED' => 'Selesai',
+                                    default => 'Unknown'
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                {{ $statusText }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-xs text-gray-500">
+                            @php
+                                $totalKomentar = isset($item->total_komentar) ? $item->total_komentar : 0;
+                            @endphp
+                            <div class="flex items-center">
+                                <i class="fas fa-comments mr-1 text-gray-400"></i>
+                                {{ $totalKomentar }}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-xs text-gray-500">
+                            {{ isset($item->CREATED_AT) ? date('d/m/Y H:i', strtotime($item->CREATED_AT)) : 'N/A' }}
+                        </td>
+                        <td class="py-3 px-4 text-xs">
+                            <div class="flex items-center space-x-2">
+                                @if(Route::has('admin.konsultasi.show'))
                                 <a href="{{ route('admin.konsultasi.show', $item->ID) }}" 
-                                   class="text-purple-600 hover:text-purple-900" title="Lihat Detail">
-                                    <i class="fas fa-eye"></i>
+                                   class="text-blue-600 hover:text-blue-900 font-medium">
+                                    Detail
                                 </a>
+                                @endif
                                 
-                                @if($item->STATUS !== 'CLOSED')
-                                <button onclick="quickClose({{ $item->ID }})" 
-                                        class="text-green-600 hover:text-green-900" title="Tutup">
-                                    <i class="fas fa-check"></i>
+                                @if($status !== 'CLOSED')
+                                <button onclick="updateStatus({{ $item->ID }}, 'CLOSED')" 
+                                        class="text-green-600 hover:text-green-900 font-medium">
+                                    Tutup
                                 </button>
                                 @endif
                             </div>
                         </td>
                     </tr>
-                    @empty
-                    <tr>
-                        <td colspan="9" class="px-6 py-8 text-center">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-comments fa-3x text-gray-300 mb-4"></i>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">Tidak ada konsultasi</h3>
-                                <p class="text-gray-500">Belum ada pengajuan konsultasi atau aspirasi{{ request('status') ? ' dengan status tersebut' : '' }}.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
         </div>
         
-        @if(count($konsultasiList) > 0)
-        <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
-            <div class="text-sm text-gray-700">
-                Menampilkan {{ count($konsultasiList) }} dari {{ $totalKonsultasi }} konsultasi
+        <!-- Pagination - Same style as user -->
+        @if(isset($pagination) && $pagination['total'] > $pagination['per_page'])
+        <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div class="flex items-center justify-between">
+                <div class="flex justify-between flex-1 sm:hidden">
+                    @if($pagination['has_previous_pages'])
+                    <a href="{{ request()->fullUrlWithQuery(['page' => $pagination['current_page'] - 1]) }}" 
+                       class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Previous
+                    </a>
+                    @endif
+                    @if($pagination['has_more_pages'])
+                    <a href="{{ request()->fullUrlWithQuery(['page' => $pagination['current_page'] + 1]) }}" 
+                       class="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Next
+                    </a>
+                    @endif
+                </div>
+                <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing 
+                            <span class="font-medium">{{ ($pagination['current_page'] - 1) * $pagination['per_page'] + 1 }}</span>
+                            to 
+                            <span class="font-medium">{{ min($pagination['current_page'] * $pagination['per_page'], $pagination['total']) }}</span>
+                            of 
+                            <span class="font-medium">{{ $pagination['total'] }}</span>
+                            results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            @if($pagination['has_previous_pages'])
+                            <a href="{{ request()->fullUrlWithQuery(['page' => $pagination['current_page'] - 1]) }}" 
+                               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            @endif
+                            
+                            @for($i = max(1, $pagination['current_page'] - 2); $i <= min($pagination['last_page'], $pagination['current_page'] + 2); $i++)
+                            <a href="{{ request()->fullUrlWithQuery(['page' => $i]) }}" 
+                               class="relative inline-flex items-center px-4 py-2 border text-sm font-medium {{ $i === $pagination['current_page'] ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50' }}">
+                                {{ $i }}
+                            </a>
+                            @endfor
+                            
+                            @if($pagination['has_more_pages'])
+                            <a href="{{ request()->fullUrlWithQuery(['page' => $pagination['current_page'] + 1]) }}" 
+                               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            @endif
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+        @else
+        <div class="p-6 text-center">
+            <div class="text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-4"></i>
+                <p class="text-lg font-medium">Tidak ada konsultasi ditemukan</p>
+                <p class="text-sm">Belum ada konsultasi yang sesuai dengan filter yang dipilih</p>
             </div>
         </div>
         @endif
     </div>
 </div>
 
-<!-- Quick Close Modal -->
-<div id="quickCloseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div class="p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Tutup Konsultasi</h3>
-                <p class="text-gray-600 mb-4">Apakah Anda yakin ingin menutup konsultasi ini?</p>
-                <form id="quickCloseForm">
-                    <textarea id="closingNote" name="closing_note" rows="3" 
-                              class="w-full border border-gray-300 rounded-lg p-3 mb-4" 
-                              placeholder="Catatan penutupan (opsional)..."></textarea>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="closeModal()" 
-                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                            Batal
-                        </button>
-                        <button type="submit" 
-                                class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">
-                            Tutup Konsultasi
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@endsection
-
-@push('scripts')
+<!-- JavaScript Functions -->
 <script>
-let currentKonsultasiId = null;
-
 function refreshData() {
     window.location.reload();
 }
 
 function exportData() {
     // Implement export functionality
-    alert('Export functionality will be implemented');
+    alert('Fitur export akan segera tersedia');
 }
 
-function quickClose(id) {
-    currentKonsultasiId = id;
-    document.getElementById('quickCloseModal').classList.remove('hidden');
+function updateStatus(id, status) {
+    if (confirm('Apakah Anda yakin ingin mengubah status konsultasi ini?')) {
+        fetch(`/admin/konsultasi/${id}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Gagal mengubah status: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mengubah status');
+        });
+    }
 }
-
-function closeModal() {
-    document.getElementById('quickCloseModal').classList.add('hidden');
-    currentKonsultasiId = null;
-    document.getElementById('closingNote').value = '';
-}
-
-document.getElementById('quickCloseForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    if (!currentKonsultasiId) return;
-    
-    const closingNote = document.getElementById('closingNote').value;
-    
-    // Create form data
-    const formData = new FormData();
-    formData.append('closing_note', closingNote);
-    formData.append('_token', '{{ csrf_token() }}');
-    
-    // Submit to server
-    fetch(`/admin/konsultasi/${currentKonsultasiId}/close`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            alert('Konsultasi berhasil ditutup');
-            closeModal();
-            refreshData();
-        } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    });
-});
 </script>
-@endpush
+@endsection
