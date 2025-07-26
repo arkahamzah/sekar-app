@@ -145,9 +145,10 @@
                     <div class="space-y-4">
                         @foreach($komentar as $comment)
                         @php
-                            $isAdmin = (isset($comment->N_NIK_RESPONDER) && $comment->N_NIK_RESPONDER === Auth::user()->nik) ||
+                            $isAdmin = (isset($comment->N_NIK) && $comment->N_NIK === Auth::user()->nik) ||
                                       str_contains(strtolower($comment->KOMENTAR), 'admin') ||
-                                      str_contains(strtolower($comment->KOMENTAR), 'status diubah');
+                                      str_contains(strtolower($comment->KOMENTAR), 'status diubah') ||
+                                      (isset($comment->PENGIRIM_ROLE) && $comment->PENGIRIM_ROLE === 'ADMIN');
                         @endphp
                         <div class="flex space-x-4 {{ $isAdmin ? 'bg-blue-50' : 'bg-gray-50' }} p-4 rounded-lg">
                             <div class="flex-shrink-0">
@@ -163,7 +164,7 @@
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="flex items-center space-x-2">
                                         <h5 class="font-medium text-gray-900">
-                                            {{ isset($comment->responder_nama) ? $comment->responder_nama : (isset($comment->N_NIK_RESPONDER) ? $comment->N_NIK_RESPONDER : 'Unknown') }}
+                                            {{ isset($comment->responder_nama) ? $comment->responder_nama : (isset($comment->N_NIK) ? $comment->N_NIK : 'Unknown') }}
                                         </h5>
                                         @if($isAdmin)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -259,7 +260,7 @@
                         
                         <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                             <span class="text-gray-600">NIK:</span>
-                            <span class="font-medium text-gray-900">{{ isset($konsultasi->N_NIK_PENGAJU) ? $konsultasi->N_NIK_PENGAJU : 'N/A' }}</span>
+                            <span class="font-medium text-gray-900">{{ isset($konsultasi->N_NIK) ? $konsultasi->N_NIK : 'N/A' }}</span>
                         </div>
                     </div>
                 </div>

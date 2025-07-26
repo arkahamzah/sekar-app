@@ -35,7 +35,7 @@ class AdminKonsultasiController extends Controller
             $query = "
                 SELECT 
                     ka.ID,
-                    ka.N_NIK_PENGAJU,
+                    ka.N_NIK,
                     ka.JENIS,
                     ka.KATEGORI_ADVOKASI,
                     ka.TUJUAN,
@@ -51,8 +51,8 @@ class AdminKonsultasiController extends Controller
                     k.N_NIK as pengaju_nik,
                     k.V_KOTA_GEDUNG as pengaju_lokasi,
                     (SELECT COUNT(*) FROM t_konsultasi_komentar kk WHERE kk.ID_KONSULTASI = ka.ID) as total_komentar
-                FROM t_konsultasi_advokasi ka
-                LEFT JOIN t_karyawan k ON ka.N_NIK_PENGAJU = k.N_NIK
+                FROM t_konsultasi ka
+                LEFT JOIN t_karyawan k ON ka.N_NIK = k.N_NIK
                 WHERE 1=1
             ";
             
@@ -183,8 +183,8 @@ class AdminKonsultasiController extends Controller
                     k.N_NIK as pengaju_nik,
                     k.EMAIL as pengaju_email,
                     k.V_KOTA_GEDUNG as pengaju_lokasi
-                FROM t_konsultasi_advokasi ka
-                LEFT JOIN t_karyawan k ON ka.N_NIK_PENGAJU = k.N_NIK
+                FROM t_konsultasi ka
+                LEFT JOIN t_karyawan k ON ka.N_NIK = k.N_NIK
                 WHERE ka.ID = ?
             ";
             
@@ -254,6 +254,7 @@ class AdminKonsultasiController extends Controller
                 ], 403);
             }
             
+            // Update status
             DB::transaction(function () use ($validated, $id, $user) {
                 // Update status
                 $updateData = [
@@ -266,7 +267,7 @@ class AdminKonsultasiController extends Controller
                     $updateData['CLOSED_BY'] = $user->nik;
                 }
                 
-                DB::table('t_konsultasi_advokasi')
+                DB::table('t_konsultasi')
                   ->where('ID', $id)
                   ->update($updateData);
                 
@@ -274,9 +275,11 @@ class AdminKonsultasiController extends Controller
                 if (!empty($validated['catatan'])) {
                     DB::table('t_konsultasi_komentar')->insert([
                         'ID_KONSULTASI' => $id,
-                        'N_NIK_RESPONDER' => $user->nik,
+                        'N_NIK' => $user->nik,
                         'KOMENTAR' => "Status diubah menjadi {$validated['status']}. Catatan: {$validated['catatan']}",
+                        'PENGIRIM_ROLE' => 'ADMIN',
                         'CREATED_AT' => now(),
+                        'CREATED_BY' => $user->nik,
                     ]);
                 }
             });
@@ -320,13 +323,15 @@ class AdminKonsultasiController extends Controller
                 // Add response
                 DB::table('t_konsultasi_komentar')->insert([
                     'ID_KONSULTASI' => $id,
-                    'N_NIK_RESPONDER' => $user->nik,
+                    'N_NIK' => $user->nik,
                     'KOMENTAR' => $validated['komentar'],
+                    'PENGIRIM_ROLE' => 'ADMIN',
                     'CREATED_AT' => now(),
+                    'CREATED_BY' => $user->nik,
                 ]);
                 
                 // Update konsultasi status to IN_PROGRESS jika masih OPEN
-                DB::table('t_konsultasi_advokasi')
+                DB::table('t_konsultasi')
                   ->where('ID', $id)
                   ->where('STATUS', 'OPEN')
                   ->update([
@@ -376,7 +381,7 @@ class AdminKonsultasiController extends Controller
                 DB::table('t_konsultasi_komentar')->where('ID_KONSULTASI', $id)->delete();
                 
                 // Delete konsultasi
-                $deleted = DB::table('t_konsultasi_advokasi')->where('ID', $id)->delete();
+                $deleted = DB::table('t_konsultasi')->where('ID', $id)->delete();
                 
                 if (!$deleted) {
                     throw new \Exception('Konsultasi tidak ditemukan');
@@ -428,7 +433,7 @@ class AdminKonsultasiController extends Controller
             // Get konsultasi
             $konsultasi = DB::select("
                 SELECT TUJUAN_SPESIFIK
-                FROM t_konsultasi_advokasi
+                FROM t_konsultasi
                 WHERE ID = ?
             ", [$konsultasiId]);
             
@@ -472,19 +477,19 @@ class AdminKonsultasiController extends Controller
                 }
             }
             
-            $total = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere}", $params)[0]->count;
+            $total = DB::select("SELECT COUNT(*) as count FROM t_konsultasi WHERE {$baseWhere}", $params)[0]->count;
             
             $openParams = $params;
             $openParams[] = 'OPEN';
-            $open = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $openParams)[0]->count;
+            $open = DB::select("SELECT COUNT(*) as count FROM t_konsultasi WHERE {$baseWhere} AND STATUS = ?", $openParams)[0]->count;
             
             $progressParams = $params;
             $progressParams[] = 'IN_PROGRESS';
-            $inProgress = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $progressParams)[0]->count;
+            $inProgress = DB::select("SELECT COUNT(*) as count FROM t_konsultasi WHERE {$baseWhere} AND STATUS = ?", $progressParams)[0]->count;
             
             $closedParams = $params;
             $closedParams[] = 'CLOSED';
-            $closed = DB::select("SELECT COUNT(*) as count FROM t_konsultasi_advokasi WHERE {$baseWhere} AND STATUS = ?", $closedParams)[0]->count;
+            $closed = DB::select("SELECT COUNT(*) as count FROM t_konsultasi WHERE {$baseWhere} AND STATUS = ?", $closedParams)[0]->count;
             
             return [
                 'total' => $total,
