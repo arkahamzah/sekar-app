@@ -11,7 +11,7 @@
     </div>
 
     <!-- Center - Register Form -->
-    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+    <div class="max-w-sm w-full bg-white rounded-lg shadow-lg p-6">
         <div class="text-center mb-6">
             <h2 class="text-xl font-bold text-gray-900">Daftar Sekar</h2>
         </div>
@@ -51,22 +51,6 @@
                 >
             </div>
 
-            <!-- Email Input -->
-            <div>
-                <label class="block text-gray-700 text-sm font-medium mb-1">
-                    Email Pribadi <span class="text-red-500">*</span>
-                </label>
-                <input 
-                    type="email" 
-                    name="email" 
-                    placeholder="email.pribadi@gmail.com" 
-                    value="{{ old('email') }}"
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200 text-sm"
-                    required
-                >
-                <p class="text-xs text-gray-500 mt-0.5">Email untuk notifikasi dan reset password</p>
-            </div>
-
             <div>
                 <label class="block text-gray-700 text-sm font-medium mb-1">
                     Iuran Sukarela <span class="text-gray-500">(Opsional)</span>
@@ -95,19 +79,6 @@
                 </label>
             </div>
 
-            <div class="flex items-start space-x-2">
-                <input 
-                    type="checkbox" 
-                    id="email_agreement" 
-                    name="email_agreement"
-                    class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
-                    required
-                >
-                <label for="email_agreement" class="text-xs text-gray-700 leading-tight">
-                    Saya menyetujui penggunaan email pribadi untuk notifikasi sistem SEKAR dan konfirmasi reset password.
-                </label>
-            </div>
-
             <button 
                 type="button"
                 id="daftarBtn"
@@ -132,7 +103,6 @@
                 <img src="{{ asset('asset/logo.png') }}" alt="SEKAR Logo" class="h-12">
             </div>
             <h3 class="text-lg font-semibold text-gray-900 mb-1">Validasi dengan Password Portal</h3>
-            <p class="text-sm text-gray-600">Konfirmasi identitas dengan password Global Protect</p>
         </div>
 
         <form id="passwordForm" class="space-y-6">
@@ -141,11 +111,10 @@
                     type="password" 
                     id="password_portal" 
                     name="password_portal" 
-                    placeholder="Password Portal/Global Protect"
+                    placeholder="Password Portal"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200"
                     required
                 >
-                <p class="text-xs text-gray-500 mt-1">Password yang sama dengan akses Global Protect Telkom</p>
             </div>
 
             <div class="flex space-x-3">
@@ -265,18 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    // Email validation
-    const emailInput = document.querySelector('input[name="email"]');
-    emailInput.addEventListener('blur', function(e) {
-        const email = e.target.value;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
-        if (email && !emailRegex.test(email)) {
-            showTemporaryMessage('Format email tidak valid', 'warning');
-            e.target.focus();
-        }
-    });
-
     // Show modal when Daftar button is clicked
     daftarBtn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -284,19 +241,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate required fields first
         const nik = document.querySelector('input[name="nik"]').value;
         const name = document.querySelector('input[name="name"]').value;
-        const email = document.querySelector('input[name="email"]').value;
         const agreement = document.querySelector('input[name="agreement"]').checked;
-        const emailAgreement = document.querySelector('input[name="email_agreement"]').checked;
         
-        if (!nik || !name || !email || !agreement || !emailAgreement) {
+        if (!nik || !name || !agreement) {
             showTemporaryMessage('Silakan lengkapi semua field yang wajib diisi', 'warning');
-            return;
-        }
-        
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            showTemporaryMessage('Format email tidak valid', 'warning');
             return;
         }
         

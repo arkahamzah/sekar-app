@@ -51,17 +51,8 @@ class AuthController extends Controller
         $validated = $request->validate([
             'nik' => 'required|string|unique:users,nik',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'iuran_sukarela' => 'nullable|string',
-            'agreement' => 'required|accepted',
-            'email_agreement' => 'required|accepted',
-        ], [
-            'email.required' => 'Email pribadi wajib diisi.',
-            'email.email' => 'Format email tidak valid.',
-            'email.unique' => 'Email sudah terdaftar.',
-            'agreement.required' => 'Anda harus menyetujui syarat dan ketentuan.',
-            'email_agreement.required' => 'Anda harus menyetujui penggunaan email untuk notifikasi.',
         ]);
 
         // Check if NIK exists in karyawan table
@@ -79,45 +70,32 @@ class AuthController extends Controller
             // Remove all non-numeric characters and convert to integer
             $cleanedIuran = preg_replace('/[^0-9]/', '', $validated['iuran_sukarela']);
             $iuranSukarela = (int) $cleanedIuran;
-            
-            // Validate kelipatan 5000
-            if ($iuranSukarela > 0 && $iuranSukarela % 5000 !== 0) {
-                throw ValidationException::withMessages([
-                    'iuran_sukarela' => ['Iuran sukarela harus dalam kelipatan Rp 5.000.'],
-                ]);
-            }
         }
 
         try {
             DB::transaction(function () use ($validated, $karyawan, $iuranSukarela) {
+                // Generate dummy email based on NIK
+                $email = $validated['nik'] . '@sekar.local';
+
                 $user = User::create([
                     'nik' => $validated['nik'],
                     'name' => $validated['name'],
-                    'email' => $validated['email'], // Use real email
+                    'email' => $email,
                     'password' => Hash::make($validated['password']),
                 ]);
 
                 // Create or update iuran record - PREVENT DUPLICATES
                 $this->createOrUpdateIuranRecord($validated['nik'], $iuranSukarela);
 
-                // Log successful registration with real email
-                Log::info('User registered with real email', [
-                    'nik' => $user->nik,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'iuran_sukarela' => $iuranSukarela
-                ]);
-
                 Auth::login($user);
             });
 
-            return redirect()->route('dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang di SEKAR. Email konfirmasi akan dikirim ke ' . $validated['email']);
+            return redirect()->route('dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang di SEKAR.');
             
         } catch (\Exception $e) {
             Log::error('Registration Error:', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'input' => $validated
+                'trace' => $e->getTraceAsString()
             ]);
             
             return back()->withInput()->with('error', 'Terjadi kesalahan saat registrasi: ' . $e->getMessage());
