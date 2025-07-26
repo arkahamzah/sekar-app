@@ -1,5 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 <!-- resources/views/app.blade.php -->
+=======
+<!-- resources/views/layouts/app.blade.php -->
+>>>>>>> parent of cca1520 (update-reset pass)
 =======
 <!-- resources/views/layouts/app.blade.php -->
 >>>>>>> parent of cca1520 (update-reset pass)
@@ -144,6 +148,9 @@
                             <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
                                 <span class="text-white text-xs font-medium">{{ substr(Auth::user()->name, 0, 1) }}</span>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
                             </div>
                             <span class="text-sm font-medium">{{ Auth::user()->name }}</span>
                             <svg class="w-4 h-4 transition-transform duration-200" id="userMenuChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,6 +184,7 @@
                                     <svg class="w-4 h-4 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"></path>
                                     </svg>
+<<<<<<< HEAD
                                     <span>Profil Saya</span>
                                 </a>
                                 
@@ -246,6 +254,8 @@
                                     <svg class="w-4 h-4 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"></path>
                                     </svg>
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
                                     <span>Profile Sekar</span>
                                 </a>
                                 
@@ -298,6 +308,9 @@
                                     @endif
                                 </div>
                             </div>
+<<<<<<< HEAD
+>>>>>>> parent of cca1520 (update-reset pass)
+=======
 >>>>>>> parent of cca1520 (update-reset pass)
                             @endif
                             
@@ -336,6 +349,7 @@
                             <span>Dashboard</span>
                         </a>
 <<<<<<< HEAD
+<<<<<<< HEAD
 
                         <a href="{{ route('profile.index') }}" class="flex items-center px-3 py-2.5 {{ request()->routeIs('profile*') ? 'text-blue-600 bg-blue-50 nav-active' : 'text-gray-600 hover:bg-gray-50' }} rounded-lg text-sm transition-all duration-200 {{ request()->routeIs('profile*') ? 'font-medium' : '' }}">
                             <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -361,11 +375,18 @@
                             <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
 >>>>>>> parent of cca1520 (update-reset pass)
+=======
+                        
+                        <a href="{{ route('data-anggota.index') }}" class="flex items-center px-3 py-2.5 {{ request()->routeIs('data-anggota*') ? 'text-blue-600 bg-blue-50 nav-active' : 'text-gray-600 hover:bg-gray-50' }} rounded-lg text-sm transition-all duration-200 {{ request()->routeIs('data-anggota*') ? 'font-medium' : '' }}">
+                            <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+>>>>>>> parent of cca1520 (update-reset pass)
                             </svg>
                             <span>Data Anggota</span>
                         </a>
                     </div>
 
+<<<<<<< HEAD
 <<<<<<< HEAD
                         <a href="{{ route('sertifikat.show') }}" class="flex items-center px-3 py-2.5 {{ request()->routeIs('sertifikat*') ? 'text-blue-600 bg-blue-50 nav-active' : 'text-gray-600 hover:bg-gray-50' }} rounded-lg text-sm transition-all duration-200 {{ request()->routeIs('sertifikat*') ? 'font-medium' : '' }}">
                             <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -375,6 +396,8 @@
                         </a>
 
 =======
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
                     <!-- Services Navigation -->
                     <div class="menu-group pb-4">
                         <div class="px-3 mb-3">
@@ -389,6 +412,9 @@
                             <span>Advokasi & Aspirasi</span>
                         </a>
                         
+<<<<<<< HEAD
+>>>>>>> parent of cca1520 (update-reset pass)
+=======
 >>>>>>> parent of cca1520 (update-reset pass)
                         <a href="{{ route('banpers.index') }}" class="flex items-center px-3 py-2.5 {{ request()->routeIs('banpers*') ? 'text-blue-600 bg-blue-50 nav-active' : 'text-gray-600 hover:bg-gray-50' }} rounded-lg text-sm transition-all duration-200 {{ request()->routeIs('banpers*') ? 'font-medium' : '' }}">
                             <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -418,14 +444,29 @@
                                 </svg>
                                 <span>Pengaturan Sistem</span>
 <<<<<<< HEAD
+<<<<<<< HEAD
                             </a>
                         </div>
 =======
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
                                 <span class="ml-auto text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                                     {{ auth()->user()->pengurus->role->NAME }}
                                 </span>
                             </a>
                         </div>
+<<<<<<< HEAD
+=======
+                    </div>
+                    @endif
+                </div>
+
+                <!-- Footer Info -->
+                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gray-50 border-t border-gray-200">
+                    <div class="text-center">
+                        <p class="text-xs text-gray-500">SEKAR v1.0</p>
+                        <p class="text-xs text-gray-400">Serikat Karyawan Telkom</p>
+>>>>>>> parent of cca1520 (update-reset pass)
                     </div>
                     @endif
                 </div>
@@ -444,6 +485,7 @@
     @endif
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         <!-- Main Content -->
         <main class="ml-64 pt-14">
             @yield('content')
@@ -455,10 +497,15 @@
         </main>
     @endif
 =======
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
     <!-- Main Content -->
     <main class="{{ Auth::check() ? 'ml-64 pt-14 min-h-screen' : 'min-h-screen' }}">
         @yield('content')
     </main>
+<<<<<<< HEAD
+>>>>>>> parent of cca1520 (update-reset pass)
+=======
 >>>>>>> parent of cca1520 (update-reset pass)
 
     <script>
@@ -466,6 +513,7 @@
         const userMenuButton = document.getElementById('userMenuButton');
         const userDropdown = document.getElementById('userDropdown');
         const userMenuChevron = document.getElementById('userMenuChevron');
+<<<<<<< HEAD
 <<<<<<< HEAD
         
         // Handle scroll for header shadow
@@ -479,6 +527,8 @@
             } else {
                 header.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
 =======
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
         const header = document.querySelector('header');
         
         // Header scroll effect
@@ -491,6 +541,9 @@
                 header.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
             } else {
                 header.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+<<<<<<< HEAD
+>>>>>>> parent of cca1520 (update-reset pass)
+=======
 >>>>>>> parent of cca1520 (update-reset pass)
             }
             

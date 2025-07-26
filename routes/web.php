@@ -74,15 +74,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     // Password Reset Management Routes (accessible by all authenticated users)
     Route::prefix('password-management')->name('password.management.')->group(function () {
         Route::get('/', [PasswordResetController::class, 'userTokenList'])->name('index');
         Route::delete('/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('cleanup');
 =======
+=======
+>>>>>>> parent of cca1520 (update-reset pass)
     // Admin Routes for Password Reset Management
     Route::middleware('check.admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/password-tokens', [PasswordResetController::class, 'adminTokenList'])->name('password.tokens');
         Route::delete('/password-tokens/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('password.cleanup');
+<<<<<<< HEAD
+>>>>>>> parent of cca1520 (update-reset pass)
+=======
 >>>>>>> parent of cca1520 (update-reset pass)
     });
 });
