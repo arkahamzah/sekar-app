@@ -73,9 +73,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
     Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
     
-    // Admin Routes for Password Reset Management
-    Route::middleware('check.admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/password-tokens', [PasswordResetController::class, 'adminTokenList'])->name('password.tokens');
-        Route::delete('/password-tokens/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('password.cleanup');
+    // Password Reset Management Routes (accessible by all authenticated users)
+    Route::prefix('password-management')->name('password.management.')->group(function () {
+        Route::get('/', [PasswordResetController::class, 'userTokenList'])->name('index');
+        Route::delete('/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('cleanup');
     });
 });

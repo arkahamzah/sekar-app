@@ -163,6 +163,46 @@ class PasswordResetController extends Controller
     }
 
     /**
+     * User function to view their own password reset tokens
+     */
+    public function userTokenList(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            
+            // Get password reset tokens for current user only
+            $tokens = PasswordResetToken::with('user')
+                ->where('email', $user->email)
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+
+            // Get statistics for current user only
+            $userTokens = PasswordResetToken::where('email', $user->email);
+            $totalTokens = $userTokens->count();
+            $expiredTokens = $userTokens->where('created_at', '<', now()->subHour())->count();
+            $activeTokens = $userTokens->where('created_at', '>=', now()->subHour())->count();
+
+            return view('password-management.index', [
+                'tokens' => $tokens,
+                'totalTokens' => $totalTokens,
+                'expiredTokens' => $expiredTokens,
+                'activeTokens' => $activeTokens,
+                'user' => $user
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('User token list failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->route('dashboard')
+                ->with('error', 'Terjadi kesalahan saat memuat data token reset password.');
+        }
+    }
+
+    /**
      * Generate password reset token
      */
     private function generateResetToken(User $user): ?string
@@ -267,17 +307,42 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Clean up expired tokens (can be called by scheduler)
+     * Clean up expired tokens for current user (can be called by any authenticated user)
      */
     public function cleanupExpiredTokens()
     {
-        $deleted = PasswordResetToken::where('created_at', '<', now()->subHour())->delete();
-        
-        Log::info('Cleaned up expired password reset tokens', [
-            'deleted_count' => $deleted,
-            'timestamp' => now()
-        ]);
+        try {
+            $user = auth()->user();
+            
+            // Clean up expired tokens for current user only
+            $deleted = PasswordResetToken::where('email', $user->email)
+                ->where('created_at', '<', now()->subHour())
+                ->delete();
+            
+            Log::info('Cleaned up expired password reset tokens', [
+                'deleted_count' => $deleted,
+                'user_nik' => $user->nik,
+                'user_email' => $user->email,
+                'timestamp' => now()
+            ]);
 
-        return $deleted;
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil menghapus {$deleted} token yang telah kadaluarsa.",
+                'deleted_count' => $deleted
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Token cleanup failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat membersihkan token.'
+            ], 500);
+        }
     }
 }
