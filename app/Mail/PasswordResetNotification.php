@@ -54,7 +54,7 @@ class PasswordResetNotification extends Mailable
                 'user' => $this->user,
                 'resetUrl' => $this->resetUrl,
                 'token' => $this->token,
-                'validUntil' => now()->addHour()->format('d M Y, H:i') . ' WIB',
+                'validUntil' => now()->addHour()->setTimezone('Asia/Jakarta')->format('d M Y, H:i') . ' WIB',
             ]
         );
     }

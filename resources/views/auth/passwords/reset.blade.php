@@ -52,20 +52,20 @@
 
             <form method="POST" action="{{ route('password.update') }}" class="space-y-6" id="resetForm">
                 @csrf
-                
+
                 <input type="hidden" name="token" value="{{ $token }}">
                 <input type="hidden" name="email" value="{{ $email }}">
-                
+
                 <div>
                     <label for="password_portal" class="block text-sm font-medium text-gray-700 mb-2">
                         Password Portal
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            name="password_portal" 
+                        <input
+                            type="password"
+                            name="password_portal"
                             id="password_portal"
-                            placeholder="Masukkan password portal Anda" 
+                            placeholder="Masukkan password portal Anda"
                             class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200 text-gray-700 @error('password_portal') border-red-300 @enderror pr-12"
                             required
                             autofocus
@@ -85,11 +85,11 @@
                         Konfirmasi Password Portal
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            name="password_portal_confirmation" 
+                        <input
+                            type="password"
+                            name="password_portal_confirmation"
                             id="password_portal_confirmation"
-                            placeholder="Ulangi password portal Anda" 
+                            placeholder="Ulangi password portal Anda"
                             class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition duration-200 text-gray-700 @error('password_portal_confirmation') border-red-300 @enderror pr-12"
                             required
                         >
@@ -112,7 +112,7 @@
                     </div>
                 </div>
 
-                <button 
+                <button
                     type="submit"
                     id="submitBtn"
                     class="w-full bg-blue-700 text-white py-4 rounded-lg font-medium hover:bg-blue-800 transition duration-200 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -124,7 +124,7 @@
                     <a href="{{ route('login') }}" class="text-blue-600 hover:underline font-medium text-sm">
                         ← Kembali ke Login
                     </a>
-                    
+
                     <div class="text-xs text-gray-500">
                         <p>Link bermasalah? <a href="{{ route('password.request') }}" class="text-blue-600 hover:underline">Minta link baru</a></p>
                     </div>
@@ -207,12 +207,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const matchText = document.getElementById('matchText');
     const submitBtn = document.getElementById('submitBtn');
     const form = document.getElementById('resetForm');
-    
+
     // Password visibility toggle
     window.togglePassword = function(inputId) {
         const input = document.getElementById(inputId);
         const eye = document.getElementById('eye-' + inputId);
-        
+
         if (input.type === 'password') {
             input.type = 'text';
             eye.innerHTML = `
@@ -226,15 +226,15 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
     };
-    
+
     // Password match validation
     function checkPasswordMatch() {
         const password = passwordInput.value;
         const confirm = confirmInput.value;
-        
+
         if (confirm.length > 0) {
             matchIndicator.classList.remove('hidden');
-            
+
             if (password === confirm) {
                 matchIndicator.className = 'password-match-success';
                 matchIcon.innerHTML = `
@@ -255,10 +255,10 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
         }
     }
-    
+
     passwordInput.addEventListener('input', checkPasswordMatch);
     confirmInput.addEventListener('input', checkPasswordMatch);
-    
+
     // Form submission with loading state
     form.addEventListener('submit', function() {
         const originalText = submitBtn.textContent;
@@ -270,23 +270,23 @@ document.addEventListener('DOMContentLoaded', function() {
             </svg>
             Memproses...
         `;
-        
+
         // Reset button after 10 seconds as fallback
         setTimeout(() => {
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
         }, 10000);
     });
-    
+
     // Countdown timer (assuming 1 hour expiry)
     let timeLeft = 3600; // 1 hour in seconds
     const countdownEl = document.getElementById('countdown');
-    
+
     function updateCountdown() {
         const hours = Math.floor(timeLeft / 3600);
         const minutes = Math.floor((timeLeft % 3600) / 60);
         const seconds = timeLeft % 60;
-        
+
         if (timeLeft > 0) {
             countdownEl.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             timeLeft--;
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.textContent = 'Link Kadaluarsa';
         }
     }
-    
+
     updateCountdown();
     setInterval(updateCountdown, 1000);
 });

@@ -34,7 +34,7 @@
                 <div>
                     <p class="text-sm font-medium text-yellow-800">Sertifikat Belum Berlaku</p>
                     <p class="text-xs text-yellow-700">
-                        Sertifikat akan berlaku pada periode: 
+                        Sertifikat akan berlaku pada periode:
                         @if($periode['start'] && $periode['end'])
                             {{ \Carbon\Carbon::parse($periode['start'])->format('d M Y') }} - {{ \Carbon\Carbon::parse($periode['end'])->format('d M Y') }}
                         @else
@@ -127,9 +127,9 @@
                 <!-- Certificate Text -->
                 <div class="text-center mb-8 p-4 bg-gray-50 rounded-lg">
                     <p class="text-gray-700 leading-relaxed">
-                        Dengan ini menyatakan bahwa yang bersangkutan telah terdaftar sebagai 
-                        <strong>Anggota Serikat Karyawan Telkom (SEKAR)</strong> 
-                        sejak tanggal <strong>{{ $joinDate->format('d F Y') }}</strong> 
+                        Dengan ini menyatakan bahwa yang bersangkutan telah terdaftar sebagai
+                        <strong>Anggota Serikat Karyawan Telkom (SEKAR)</strong>
+                        sejak tanggal <strong>{{ $joinDate->format('d F Y') }}</strong>
                         dan memiliki hak serta kewajiban sesuai dengan Anggaran Dasar dan Anggaran Rumah Tangga SEKAR.
                     </p>
                 </div>
@@ -196,7 +196,7 @@
                 <div class="text-center mt-8 pt-6 border-t border-gray-200">
                     <p class="text-xs text-gray-500">
                         Sertifikat ini diterbitkan secara digital oleh Sistem Informasi SEKAR<br>
-                        Tanggal cetak: {{ now()->format('d F Y, H:i') }} WIB
+                        Tanggal cetak: {{ now()->setTimezone('Asia/Jakarta')->format('d F Y, H:i') }} WIB
                     </p>
                 </div>
             </div>
@@ -209,19 +209,19 @@
     .no-print {
         display: none !important;
     }
-    
+
     body {
         margin: 0;
         font-size: 12px;
     }
-    
+
     #certificate {
         box-shadow: none !important;
         border: 1px solid #000 !important;
         margin: 0;
         page-break-inside: avoid;
     }
-    
+
     .bg-gradient-to-r {
         background: #1d4ed8 !important;
         -webkit-print-color-adjust: exact;

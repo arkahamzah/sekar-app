@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
@@ -112,7 +113,7 @@ class PasswordResetToken extends Model
     public static function findValidToken(string $email, string $token): ?self
     {
         $records = static::where('email', $email)->valid()->get();
-        
+
         foreach ($records as $record) {
             if (\Hash::check($token, $record->token)) {
                 return $record;
@@ -132,7 +133,7 @@ class PasswordResetToken extends Model
 
         // Generate new token
         $token = \Str::random(64);
-        
+
         // Create record
         static::create([
             'email' => $user->email,

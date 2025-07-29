@@ -276,7 +276,7 @@
             </p>
             <p style="margin-top: 15px; font-size: 11px; color: #9ca3af;">
                 © {{ date('Y') }} PT Telkom Indonesia. Semua hak dilindungi.<br>
-                Dikirim pada {{ date('d F Y, H:i') }} WIB
+                Dikirim pada {{ now()->setTimezone('Asia/Jakarta')->format('d F Y, H:i') }} WIB
             </p>
         </div>
     </div>
