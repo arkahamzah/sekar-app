@@ -72,10 +72,4 @@ Route::middleware('auth')->group(function () {
     // Setting Routes (Admin check will be done in controller)
     Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
     Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
-    
-    // Admin Routes for Password Reset Management
-    Route::middleware('check.admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/password-tokens', [PasswordResetController::class, 'adminTokenList'])->name('password.tokens');
-        Route::delete('/password-tokens/cleanup', [PasswordResetController::class, 'cleanupExpiredTokens'])->name('password.cleanup');
-    });
 });
