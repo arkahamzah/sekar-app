@@ -6,11 +6,12 @@
     <title>{{ $actionText }} - SEKAR</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
+            color: #333333;
+            background-color: #f8fafc;
             margin: 0;
             padding: 0;
-            background-color: #f8fafc;
         }
         .container {
             max-width: 600px;
@@ -21,9 +22,9 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .header {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px 20px;
+            padding: 30px 40px;
             text-align: center;
         }
         .header h1 {
@@ -32,104 +33,132 @@
             font-weight: 600;
         }
         .header p {
-            margin: 8px 0 0 0;
+            margin: 10px 0 0 0;
             opacity: 0.9;
-            font-size: 14px;
+            font-size: 16px;
         }
         .content {
-            padding: 30px 20px;
+            padding: 40px;
         }
-        .status-badge {
+        .action-badge {
             display: inline-block;
-            padding: 6px 16px;
+            background-color: {{ $actionColor }};
+            color: white;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             margin-bottom: 20px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2d3748;
         }
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
             margin: 25px 0;
+            background-color: #f7fafc;
             padding: 20px;
-            background-color: #f8fafc;
-            border-radius: 8px;
+            border-radius: 6px;
             border-left: 4px solid {{ $actionColor }};
         }
         .info-item {
-            margin: 0;
+            margin-bottom: 10px;
         }
         .info-label {
             font-weight: 600;
-            color: #374151;
-            font-size: 12px;
+            color: #4a5568;
+            font-size: 13px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.05em;
             margin-bottom: 4px;
         }
         .info-value {
-            color: #1f2937;
-            font-size: 14px;
-            margin: 0;
+            color: #2d3748;
+            font-size: 15px;
+            word-wrap: break-word;
         }
         .description-box {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
             padding: 20px;
-            margin: 20px 0;
+            margin: 25px 0;
         }
         .description-box h3 {
-            margin: 0 0 12px 0;
-            color: #374151;
+            color: #2d3748;
             font-size: 16px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
         }
         .description-text {
-            color: #6b7280;
-            line-height: 1.6;
+            color: #4a5568;
+            line-height: 1.7;
             white-space: pre-line;
         }
         .action-button {
             display: inline-block;
-            background-color: {{ $actionColor }};
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-decoration: none;
-            padding: 12px 24px;
+            padding: 15px 30px;
             border-radius: 6px;
             font-weight: 600;
-            font-size: 14px;
-            margin: 20px 0;
-            transition: background-color 0.2s;
+            font-size: 16px;
+            margin: 25px 0;
+            transition: all 0.3s ease;
         }
         .action-button:hover {
-            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         .footer {
-            background-color: #f9fafb;
-            padding: 20px;
+            background-color: #f7fafc;
+            padding: 30px 40px;
             text-align: center;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid #e2e8f0;
         }
         .footer p {
             margin: 0;
-            color: #6b7280;
-            font-size: 12px;
+            color: #718096;
+            font-size: 14px;
             line-height: 1.5;
         }
         .footer a {
-            color: {{ $actionColor }};
+            color: #667eea;
             text-decoration: none;
         }
-        @media (max-width: 600px) {
+        .divider {
+            height: 1px;
+            background-color: #e2e8f0;
+            margin: 25px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-open { background-color: #ebf8ff; color: #2b6cb0; }
+        .status-in-progress { background-color: #fefcbf; color: #975a16; }
+        .status-closed { background-color: #f0f0f0; color: #4a5568; }
+        
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 0;
+            }
+            .header, .content, .footer {
+                padding: 20px;
+            }
             .info-grid {
                 grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            .content {
-                padding: 20px 15px;
+                gap: 10px;
             }
         }
     </style>
@@ -138,35 +167,19 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>SERIKAT KARYAWAN TELKOM</h1>
-            <p>Sistem Informasi Keanggotaan</p>
+            <h1>SEKAR - Serikat Karyawan Telkom</h1>
+            <p>Sistem Konsultasi & Advokasi</p>
         </div>
 
         <!-- Content -->
         <div class="content">
-            <!-- Status Badge -->
-            <div class="status-badge" style="background-color: {{ $actionColor }}20; color: {{ $actionColor }};">
-                {{ $actionText }} {{ ucfirst($konsultasi->JENIS) }}
-            </div>
+            <!-- Action Badge -->
+            <div class="action-badge">{{ $actionText }}</div>
 
             <!-- Greeting -->
-            <h2 style="margin: 0 0 10px 0; color: #1f2937; font-size: 18px;">
+            <div class="greeting">
                 @if($actionType === 'new')
-                    Ada {{ ucfirst($konsultasi->JENIS) }} Baru!
-                @elseif($actionType === 'comment')
-                    Ada Komentar Baru!
-                @elseif($actionType === 'escalate')
-                    {{ ucfirst($konsultasi->JENIS) }} Diescalate!
-                @elseif($actionType === 'closed')
-                    {{ ucfirst($konsultasi->JENIS) }} Telah Selesai!
-                @else
-                    Ada Update {{ ucfirst($konsultasi->JENIS) }}!
-                @endif
-            </h2>
-
-            <p style="color: #6b7280; margin: 0 0 25px 0;">
-                @if($actionType === 'new')
-                    Pengajuan {{ strtolower($konsultasi->JENIS) }} baru telah masuk dan memerlukan perhatian Anda.
+                    Pengajuan {{ strtolower($konsultasi->JENIS) }} baru telah diterima dan akan segera ditindaklanjuti.
                 @elseif($actionType === 'comment')
                     Ada komentar baru pada {{ strtolower($konsultasi->JENIS) }} yang perlu ditindaklanjuti.
                 @elseif($actionType === 'escalate')
@@ -176,7 +189,7 @@
                 @else
                     Ada pembaruan pada {{ strtolower($konsultasi->JENIS) }} yang perlu Anda ketahui.
                 @endif
-            </p>
+            </div>
 
             <!-- Information Grid -->
             <div class="info-grid">
@@ -199,7 +212,11 @@
                 </div>
                 <div class="info-item">
                     <div class="info-label">Status</div>
-                    <div class="info-value">{{ $konsultasi->STATUS }}</div>
+                    <div class="info-value">
+                        <span class="status-badge status-{{ strtolower(str_replace('_', '-', $konsultasi->STATUS)) }}">
+                            {{ $konsultasi->STATUS }}
+                        </span>
+                    </div>
                 </div>
                 @if($karyawan)
                 <div class="info-item">
@@ -230,40 +247,38 @@
             </div>
 
             <!-- Action Button -->
-            <div style="text-align: center; margin: 30px 0;">
+            <div style="text-align: center;">
                 <a href="{{ $viewUrl }}" class="action-button">
-                    @if($actionType === 'new')
-                        Lihat & Tanggapi
-                    @elseif($actionType === 'comment')
-                        Lihat Komentar
-                    @elseif($actionType === 'escalate')
-                        Lihat Detail
-                    @elseif($actionType === 'closed')
-                        Lihat Hasil
-                    @else
-                        Lihat Detail
-                    @endif
+                    Lihat Detail {{ ucfirst($konsultasi->JENIS) }}
                 </a>
             </div>
 
-            <!-- Instructions -->
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;">
-                <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
-                    💡 Petunjuk:
-                </p>
-                <p style="margin: 8px 0 0 0; color: #1e40af; font-size: 13px; line-height: 1.5;">
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Additional Information -->
+            <div style="background-color: #f7fafc; padding: 20px; border-radius: 6px; margin-top: 25px;">
+                <h4 style="margin: 0 0 15px 0; color: #2d3748; font-size: 16px;">Informasi Penting</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #4a5568;">
                     @if($actionType === 'new')
-                        Silakan login ke sistem SEKAR untuk memberikan tanggapan atau komentar pada {{ strtolower($konsultasi->JENIS) }} ini.
+                        <li>{{ ucfirst($konsultasi->JENIS) }} Anda telah diterima dengan ID: <strong>{{ $konsultasi->ID }}</strong></li>
+                        <li>Tim admin akan menindaklanjuti dalam 1-3 hari kerja</li>
+                        <li>Anda akan mendapat notifikasi setiap ada pembaruan</li>
+                        <li>Silakan login ke sistem untuk melihat perkembangan</li>
                     @elseif($actionType === 'comment')
-                        Ada komentar baru yang memerlukan respon Anda. Silakan cek dan berikan tanggapan yang diperlukan.
+                        <li>Ada tanggapan baru yang perlu Anda lihat</li>
+                        <li>Silakan login untuk melihat detail komentar</li>
+                        <li>Anda dapat memberikan respon atau informasi tambahan</li>
                     @elseif($actionType === 'escalate')
-                        {{ ucfirst($konsultasi->JENIS) }} ini telah diescalate. Mohon segera ditindaklanjuti sesuai prosedur yang berlaku.
+                        <li>{{ ucfirst($konsultasi->JENIS) }} telah dieskalasi ke level {{ $konsultasi->TUJUAN }}</li>
+                        <li>Penanganan akan dilakukan oleh tim yang lebih senior</li>
+                        <li>Anda akan mendapat update status selanjutnya</li>
                     @elseif($actionType === 'closed')
-                        {{ ucfirst($konsultasi->JENIS) }} telah diselesaikan. Anda dapat melihat hasil penanganan pada sistem.
-                    @else
-                        Silakan login ke sistem untuk melihat detail lengkap dan memberikan respon yang diperlukan.
+                        <li>{{ ucfirst($konsultasi->JENIS) }} telah diselesaikan dan ditutup</li>
+                        <li>Terima kasih atas kepercayaan Anda pada SEKAR</li>
+                        <li>Silakan ajukan {{ strtolower($konsultasi->JENIS) }} baru jika diperlukan</li>
                     @endif
-                </p>
+                </ul>
             </div>
         </div>
 
@@ -271,12 +286,15 @@
         <div class="footer">
             <p>
                 <strong>SEKAR - Serikat Karyawan Telkom</strong><br>
-                Email ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.<br>
-                Untuk bantuan, silakan hubungi <a href="mailto:admin@sekar.telkom.co.id">admin@sekar.telkom.co.id</a>
+                Email ini dikirim secara otomatis dari sistem konsultasi SEKAR.<br>
+                Jika Anda memiliki pertanyaan, silakan hubungi admin melalui sistem atau email resmi.
             </p>
-            <p style="margin-top: 15px; font-size: 11px; color: #9ca3af;">
-                © {{ date('Y') }} PT Telkom Indonesia. Semua hak dilindungi.<br>
-                Dikirim pada {{ now()->setTimezone('Asia/Jakarta')->format('d F Y, H:i') }} WIB
+            <p style="margin-top: 15px;">
+                <a href="{{ config('app.url') }}">Kunjungi Portal SEKAR</a> | 
+                <a href="mailto:admin@sekar.telkom.co.id">Kontak Admin</a>
+            </p>
+            <p style="margin-top: 15px; font-size: 12px; color: #a0aec0;">
+                © {{ date('Y') }} SEKAR. Semua hak cipta dilindungi undang-undang.
             </p>
         </div>
     </div>

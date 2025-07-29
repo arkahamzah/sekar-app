@@ -5,155 +5,172 @@ namespace App\Http\Controllers;
 use App\Models\Konsultasi;
 use App\Models\KonsultasiKomentar;
 use App\Models\Karyawan;
-use App\Models\SekarPengurus;
 use App\Mail\KonsultasiNotification;
-use App\Jobs\SendKonsultasiNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 
 class KonsultasiController extends Controller
 {
     /**
-     * Display konsultasi data based on user role
+     * Display a listing of konsultasi
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        $query = Konsultasi::with(['karyawan', 'komentar']);
         
-        // Check if user is admin
+        // Filter berdasarkan role dan akses
         if ($this->isAdmin($user)) {
-            // Admin can see all konsultasi
-            $konsultasi = Konsultasi::with(['karyawan', 'komentar'])
-                                    ->orderBy('CREATED_AT', 'desc')
-                                    ->get();
+            // Admin dapat melihat semua konsultasi sesuai level mereka
+            $adminLevel = $this->getAdminLevel($user);
+            $query = $this->filterByAdminLevel($query, $adminLevel);
         } else {
-            // Regular user only sees their own konsultasi
-            $konsultasi = Konsultasi::where('N_NIK', $user->nik)
-                                    ->with(['karyawan', 'komentar'])
-                                    ->orderBy('CREATED_AT', 'desc')
-                                    ->get();
+            // User biasa hanya melihat konsultasi miliknya
+            $query->where('N_NIK', $user->nik);
         }
+        
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('JUDUL', 'LIKE', "%{$search}%")
+                  ->orWhere('DESKRIPSI', 'LIKE', "%{$search}%")
+                  ->orWhere('KATEGORI_ADVOKASI', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('STATUS', $request->status);
+        }
+        
+        // Filter by jenis
+        if ($request->filled('jenis')) {
+            $query->where('JENIS', $request->jenis);
+        }
+        
+        // Filter by tujuan
+        if ($request->filled('tujuan')) {
+            $query->where('TUJUAN', $request->tujuan);
+        }
+        
+        $konsultasi = $query->orderBy('CREATED_AT', 'desc')->paginate(10);
         
         return view('konsultasi.index', compact('konsultasi'));
     }
     
     /**
-     * Show create advokasi & aspirasi form
+     * Show the form for creating a new konsultasi - FIXED
      */
     public function create()
     {
         $user = Auth::user();
         $karyawan = Karyawan::where('N_NIK', $user->nik)->first();
         
-        $data = [
-            'karyawan' => $karyawan,
-            'availableTargets' => $this->getAvailableTargets($karyawan),
-            'kategoriAdvokasi' => $this->getKategoriAdvokasi(),
-        ];
+        $availableTargets = $this->getAvailableTargets($karyawan);
+        $kategoriAdvokasi = $this->getKategoriAdvokasi();
         
-        return view('konsultasi.create', $data);
+        // Pass semua variabel yang diperlukan ke view termasuk $karyawan
+        return view('konsultasi.create', compact('karyawan', 'availableTargets', 'kategoriAdvokasi'));
     }
     
     /**
-     * Store new advokasi & aspirasi
+     * Store a newly created konsultasi
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'jenis' => 'required|in:ADVOKASI,ASPIRASI',
-            'kategori_advokasi' => 'required_if:jenis,ADVOKASI',
-            'tujuan' => 'required|in:DPP,DPW,DPD,GENERAL',
-            'tujuan_spesifik' => 'required_unless:tujuan,GENERAL',
-            'judul' => 'required|max:200',
-            'deskripsi' => 'required'
+            'kategori_advokasi' => 'nullable|string|max:100',
+            'tujuan' => 'required|string|max:50',
+            'tujuan_spesifik' => 'nullable|string|max:100',
+            'judul' => 'required|string|max:200',
+            'deskripsi' => 'required|string|max:2000'
         ]);
         
         $user = Auth::user();
         
         try {
-            DB::transaction(function () use ($user, $validated) {
+            DB::transaction(function () use ($validated, $user) {
                 $konsultasi = $this->createKonsultasi($user, $validated);
                 
-                // Send email notification to relevant admins
+                // Send email notification
                 $this->sendEmailNotification($konsultasi, 'new');
             });
             
             return redirect()->route('konsultasi.index')
-                            ->with('success', 'Advokasi/Aspirasi berhasil dibuat dan akan segera ditindaklanjuti.');
+                           ->with('success', ucfirst($validated['jenis']) . ' berhasil diajukan dan akan ditindaklanjuti.');
         } catch (\Exception $e) {
             Log::error('Error creating konsultasi: ' . $e->getMessage(), [
                 'user_nik' => $user->nik,
-                'validated_data' => $validated,
-                'trace' => $e->getTraceAsString()
+                'validated_data' => $validated
             ]);
             
-            return back()->withInput()
-                        ->with('error', 'Terjadi kesalahan saat membuat advokasi/aspirasi. Silakan coba lagi.');
+            return redirect()->back()
+                           ->withInput()
+                           ->with('error', 'Terjadi kesalahan saat mengajukan ' . strtolower($validated['jenis']) . '. Silakan coba lagi.');
         }
     }
     
     /**
-     * Show advokasi & aspirasi detail
+     * Display the specified konsultasi
      */
     public function show($id)
     {
         $user = Auth::user();
+        $konsultasi = Konsultasi::with(['karyawan', 'komentar.karyawan'])->findOrFail($id);
         
-        // Build base query
-        $query = Konsultasi::where('ID', $id)
-                          ->with(['karyawan', 'komentar.karyawan']);
-        
-        // If not admin, only show own konsultasi
-        if (!$this->isAdmin($user)) {
-            $query->where('N_NIK', $user->nik);
+        // Check access permission
+        if (!$this->canAccessKonsultasi($user, $konsultasi)) {
+            return redirect()->route('konsultasi.index')
+                           ->with('error', 'Anda tidak memiliki akses untuk melihat konsultasi ini.');
         }
-        
-        $konsultasi = $query->firstOrFail();
         
         return view('konsultasi.show', compact('konsultasi'));
     }
     
     /**
-     * Add comment to advokasi & aspirasi
+     * Add comment to konsultasi (Updated method name from addComment)
      */
-    public function addComment(Request $request, $id)
+    public function comment(Request $request, $id)
     {
         $validated = $request->validate([
             'komentar' => 'required|string|max:1000'
         ]);
         
         $user = Auth::user();
+        $konsultasi = Konsultasi::findOrFail($id);
+        
+        // Check permission
+        if (!$this->canCommentOnKonsultasi($user, $konsultasi)) {
+            return redirect()->back()->with('error', 'Anda tidak dapat menambahkan komentar pada konsultasi ini.');
+        }
         
         try {
-            DB::transaction(function () use ($validated, $id, $user) {
-                // Get konsultasi (admin can comment on any, user only on their own)
-                $query = Konsultasi::where('ID', $id);
+            DB::transaction(function () use ($validated, $id, $user, $konsultasi) {
+                // Determine comment type
+                $jenisKomentar = $this->isAdmin($user) ? 'ADMIN' : 'USER';
                 
-                if (!$this->isAdmin($user)) {
-                    $query->where('N_NIK', $user->nik);
+                $this->createKomentar($id, $user->nik, $validated['komentar'], $jenisKomentar);
+                
+                // Update konsultasi status if admin responds
+                if ($jenisKomentar === 'ADMIN' && $konsultasi->STATUS === 'OPEN') {
+                    $konsultasi->update([
+                        'STATUS' => 'IN_PROGRESS',
+                        'UPDATED_BY' => $user->nik,
+                        'UPDATED_AT' => now()
+                    ]);
                 }
-                
-                $konsultasi = $query->firstOrFail();
-                
-                // Determine role for comment
-                $role = $this->isAdmin($user) ? 'ADMIN' : 'USER';
-                
-                // Create comment
-                $this->createKomentar($id, $user->nik, $validated['komentar'], $role);
-                
-                // Update status if needed
-                $this->updateKonsultasiStatus($konsultasi, $user->nik);
                 
                 // Send email notification
                 $this->sendEmailNotification($konsultasi, 'comment');
             });
             
-            return redirect()->route('konsultasi.show', $id)
-                            ->with('success', 'Komentar berhasil ditambahkan.');
+            return redirect()->back()->with('success', 'Komentar berhasil ditambahkan.');
         } catch (\Exception $e) {
             Log::error('Error adding comment: ' . $e->getMessage(), [
                 'user_nik' => $user->nik,
@@ -161,14 +178,14 @@ class KonsultasiController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return back()->with('error', 'Terjadi kesalahan saat menambahkan komentar.');
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menambahkan komentar.');
         }
     }
     
     /**
      * Close konsultasi (admin only)
      */
-    public function close(Request $request, $id)
+    public function close($id)
     {
         $user = Auth::user();
         
@@ -189,6 +206,14 @@ class KonsultasiController extends Controller
                     'UPDATED_AT' => now()
                 ]);
                 
+                // Add closure comment
+                $this->createKomentar(
+                    $id, 
+                    $user->nik, 
+                    'Konsultasi telah ditutup dan diselesaikan.',
+                    'ADMIN'
+                );
+                
                 // Send email notification
                 $this->sendEmailNotification($konsultasi, 'closed');
             });
@@ -205,12 +230,21 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Escalate konsultasi to higher level (admin only)
+     * Escalate konsultasi to higher level (admin only) - UPDATED WITH PROPER VALIDATION
      */
     public function escalate(Request $request, $id)
     {
+        $konsultasi = Konsultasi::findOrFail($id);
+        
+        // Tentukan opsi eskalasi yang valid berdasarkan level saat ini
+        $validEscalationTargets = $this->getValidEscalationTargets($konsultasi->TUJUAN);
+        
+        if (empty($validEscalationTargets)) {
+            return redirect()->back()->with('error', 'Konsultasi ini sudah berada di level tertinggi dan tidak dapat dieskalasi.');
+        }
+        
         $validated = $request->validate([
-            'escalate_to' => 'required|in:DPW,DPP',
+            'escalate_to' => 'required|in:' . implode(',', array_keys($validEscalationTargets)),
             'escalation_note' => 'required|string|max:500'
         ]);
         
@@ -222,7 +256,7 @@ class KonsultasiController extends Controller
         }
         
         try {
-            DB::transaction(function () use ($validated, $id, $user) {
+            DB::transaction(function () use ($validated, $id, $user, $validEscalationTargets) {
                 $konsultasi = Konsultasi::findOrFail($id);
                 
                 // Update konsultasi target
@@ -234,10 +268,11 @@ class KonsultasiController extends Controller
                 ]);
                 
                 // Add escalation comment
+                $targetLabel = $validEscalationTargets[$validated['escalate_to']];
                 $this->createKomentar(
                     $id, 
                     $user->nik, 
-                    "ESKALASI KE {$validated['escalate_to']}: {$validated['escalation_note']}",
+                    "ESKALASI KE {$targetLabel}: {$validated['escalation_note']}",
                     'ADMIN'
                 );
                 
@@ -258,6 +293,127 @@ class KonsultasiController extends Controller
     }
     
     /**
+     * Get escalation options for AJAX (API endpoint)
+     */
+    public function getEscalationOptions($id)
+    {
+        $konsultasi = Konsultasi::findOrFail($id);
+        $options = $this->getValidEscalationTargets($konsultasi->TUJUAN);
+        
+        return response()->json([
+            'success' => true,
+            'current_level' => $konsultasi->TUJUAN,
+            'options' => $options,
+            'can_escalate' => !empty($options)
+        ]);
+    }
+    
+    /**
+     * Get konsultasi statistics for dashboard
+     */
+    public function getStats(Request $request)
+    {
+        $user = Auth::user();
+        $nik = $this->isAdmin($user) ? null : $user->nik;
+        
+        $stats = Konsultasi::getStats($nik);
+        
+        return response()->json([
+            'success' => true,
+            'stats' => $stats
+        ]);
+    }
+    
+    /**
+     * Bulk actions for konsultasi (future enhancement)
+     */
+    public function bulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:close,escalate,delete',
+            'konsultasi_ids' => 'required|array',
+            'konsultasi_ids.*' => 'exists:t_konsultasi,ID'
+        ]);
+        
+        $user = Auth::user();
+        
+        if (!$this->isAdmin($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya admin yang dapat melakukan bulk action.'
+            ], 403);
+        }
+        
+        try {
+            $count = 0;
+            
+            foreach ($validated['konsultasi_ids'] as $id) {
+                switch ($validated['action']) {
+                    case 'close':
+                        $konsultasi = Konsultasi::find($id);
+                        if ($konsultasi && $konsultasi->STATUS !== 'CLOSED') {
+                            $konsultasi->close($user->nik);
+                            $count++;
+                        }
+                        break;
+                    // Add other bulk actions as needed
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil memproses {$count} konsultasi."
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in bulk action: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memproses bulk action.'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get valid escalation targets based on current level - FIXED METHOD
+     */
+    private function getValidEscalationTargets(string $currentLevel): array
+    {
+        switch($currentLevel) {
+            case 'DPD':
+                return [
+                    'DPW' => 'DPW (Dewan Pengurus Wilayah)',
+                    'DPP' => 'DPP (Dewan Pengurus Pusat)',
+                    'GENERAL' => 'SEKAR Pusat'
+                ];
+            case 'DPW':
+                return [
+                    'DPP' => 'DPP (Dewan Pengurus Pusat)',
+                    'GENERAL' => 'SEKAR Pusat'
+                ];
+            case 'DPP':
+                return [
+                    'GENERAL' => 'SEKAR Pusat'
+                ];
+            case 'GENERAL':
+                // Sudah di level tertinggi
+                return [];
+            default:
+                // Untuk kasus lain, berikan semua opsi kecuali current level
+                $allOptions = [
+                    'DPD' => 'DPD (Dewan Pengurus Daerah)',
+                    'DPW' => 'DPW (Dewan Pengurus Wilayah)',
+                    'DPP' => 'DPP (Dewan Pengurus Pusat)',
+                    'GENERAL' => 'SEKAR Pusat'
+                ];
+                
+                // Hapus current level dari opsi
+                unset($allOptions[$currentLevel]);
+                
+                return $allOptions;
+        }
+    }
+    
+    /**
      * Get available targets based on employee location
      */
     private function getAvailableTargets(?Karyawan $karyawan): array
@@ -274,12 +430,12 @@ class KonsultasiController extends Controller
         $dpwMapping = $this->getDpwMapping();
         $dpdMapping = $this->getDpdMapping();
         
-        if (isset($dpwMapping[$city])) {
-            $targets['DPW'] = $dpwMapping[$city];
-        }
-        
         if (isset($dpdMapping[$city])) {
             $targets['DPD'] = $dpdMapping[$city];
+        }
+        
+        if (isset($dpwMapping[$city])) {
+            $targets['DPW'] = $dpwMapping[$city];
         }
         
         $targets['DPP'] = 'DPP Pusat';
@@ -352,37 +508,94 @@ class KonsultasiController extends Controller
             'DESKRIPSI' => $validated['deskripsi'],
             'STATUS' => 'OPEN',
             'CREATED_BY' => $user->nik,
-            'CREATED_AT' => now()
+            'CREATED_AT' => now(),
+            'UPDATED_BY' => $user->nik,
+            'UPDATED_AT' => now()
         ]);
     }
     
     /**
-     * Create comment
+     * Create new comment record - UPDATED FOR CORRECT TABLE
      */
-    private function createKomentar($konsultasiId, string $nik, string $komentar, string $role = 'USER'): KonsultasiKomentar
+    private function createKomentar($konsultasiId, $nik, $komentar, $jenisKomentar): KonsultasiKomentar
     {
         return KonsultasiKomentar::create([
             'ID_KONSULTASI' => $konsultasiId,
             'N_NIK' => $nik,
             'KOMENTAR' => $komentar,
-            'PENGIRIM_ROLE' => $role,
-            'CREATED_AT' => now(),
-            'CREATED_BY' => $nik
+            'PENGIRIM_ROLE' => $jenisKomentar, // Menggunakan nama kolom yang benar
+            'CREATED_BY' => $nik,
+            'CREATED_AT' => now()
         ]);
     }
     
     /**
-     * Update status based on activity
+     * Send email notification
      */
-    private function updateKonsultasiStatus(Konsultasi $konsultasi, string $updatedBy): void
+    private function sendEmailNotification(Konsultasi $konsultasi, string $actionType): void
     {
-        if ($konsultasi->STATUS === 'OPEN') {
-            $konsultasi->update([
-                'STATUS' => 'IN_PROGRESS',
-                'UPDATED_BY' => $updatedBy,
-                'UPDATED_AT' => now()
+        try {
+            // Determine recipients based on action type and target
+            $recipients = $this->getNotificationRecipients($konsultasi, $actionType);
+            
+            foreach ($recipients as $email) {
+                Mail::to($email)->send(new KonsultasiNotification($konsultasi, $actionType));
+            }
+            
+            Log::info('Email notifications sent', [
+                'konsultasi_id' => $konsultasi->ID,
+                'action_type' => $actionType,
+                'recipients_count' => count($recipients)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send email notification: ' . $e->getMessage(), [
+                'konsultasi_id' => $konsultasi->ID,
+                'action_type' => $actionType
             ]);
         }
+    }
+    
+    /**
+     * Get notification recipients
+     */
+    private function getNotificationRecipients(Konsultasi $konsultasi, string $actionType): array
+    {
+        $recipients = [];
+        
+        // Always notify the konsultasi creator if they have email
+        if ($konsultasi->karyawan && $konsultasi->karyawan->V_EMAIL) {
+            $recipients[] = $konsultasi->karyawan->V_EMAIL;
+        }
+        
+        // Add admin emails based on target level
+        $adminEmail = $this->getAdminEmailByTarget($konsultasi->TUJUAN);
+        if ($adminEmail && !in_array($adminEmail, $recipients)) {
+            $recipients[] = $adminEmail;
+        }
+        
+        // Fallback to default admin email
+        $defaultAdminEmail = env('ADMIN_EMAIL', 'admin@sekar.telkom.co.id');
+        if ($defaultAdminEmail && !in_array($defaultAdminEmail, $recipients)) {
+            $recipients[] = $defaultAdminEmail;
+        }
+        
+        return array_filter($recipients);
+    }
+    
+    /**
+     * Get admin email by target level
+     */
+    private function getAdminEmailByTarget(string $target): ?string
+    {
+        // This should be implemented based on your admin structure
+        // For now, returning environment-based emails
+        return match($target) {
+            'DPD' => env('DPD_ADMIN_EMAIL'),
+            'DPW' => env('DPW_ADMIN_EMAIL'),
+            'DPP' => env('DPP_ADMIN_EMAIL'),
+            'GENERAL' => env('GENERAL_ADMIN_EMAIL'),
+            default => env('ADMIN_EMAIL', 'admin@sekar.telkom.co.id')
+        };
     }
     
     /**
@@ -390,61 +603,99 @@ class KonsultasiController extends Controller
      */
     private function isAdmin($user): bool
     {
-        if (!$user || !$user->pengurus || !$user->pengurus->role) {
-            return false;
-        }
-        
-        $adminRoles = ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD'];
-        return in_array($user->pengurus->role->NAME, $adminRoles);
+        return $user->pengurus && 
+               $user->pengurus->role && 
+               in_array($user->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']);
     }
     
     /**
-     * Send email notification to relevant admins
+     * Get admin level for hierarchy
      */
-    private function sendEmailNotification(Konsultasi $konsultasi, string $actionType): void
+    private function getAdminLevel($user): int
     {
-        // Prevent duplicate emails with cache-based deduplication
-        $lockKey = "email_lock_{$konsultasi->ID}_{$actionType}";
-        
-        // Check if we already sent email for this konsultasi+action in last 2 minutes
-        if (Cache::has($lockKey)) {
-            Log::info("Email notification skipped (duplicate prevention)", [
-                'konsultasi_id' => $konsultasi->ID,
-                'action_type' => $actionType,
-                'reason' => 'Cache lock active'
-            ]);
-            return;
+        if (!$this->isAdmin($user)) {
+            return 0;
         }
         
-        // Set lock for 2 minutes to prevent rapid duplicates
-        Cache::put($lockKey, true, 120);
+        $role = $user->pengurus->role->NAME;
         
-        try {
-            // FORCE SINGLE EMAIL TO ELIMINATE DUPLICATES
-            $singleEmail = 'arkhamzahs@gmail.com';
-            
-            // Send only 1 email regardless of admin structure
-            Mail::to($singleEmail)->send(new KonsultasiNotification($konsultasi, $actionType));
-            
-            Log::info("Single email notification sent for konsultasi ID: {$konsultasi->ID}", [
-                'action_type' => $actionType,
-                'recipient' => $singleEmail,
-                'konsultasi_judul' => $konsultasi->JUDUL,
-                'konsultasi_jenis' => $konsultasi->JENIS,
-                'konsultasi_tujuan' => $konsultasi->TUJUAN,
-                'timestamp' => now()->format('Y-m-d H:i:s'),
-                'cache_lock_key' => $lockKey
-            ]);
-            
-        } catch (\Exception $e) {
-            // Remove lock on error so it can be retried
-            Cache::forget($lockKey);
-            
-            Log::error("Failed to send email notification for konsultasi ID: {$konsultasi->ID}", [
-                'error' => $e->getMessage(),
-                'action_type' => $actionType,
-                'trace' => $e->getTraceAsString()
-            ]);
+        return match($role) {
+            'ADM' => 4,           // Highest level
+            'ADMIN_DPP' => 3,     // National level
+            'ADMIN_DPW' => 2,     // Regional level
+            'ADMIN_DPD' => 1,     // Local level
+            default => 0
+        };
+    }
+    
+    /**
+     * Filter konsultasi by admin level
+     */
+    private function filterByAdminLevel($query, int $adminLevel)
+    {
+        // Admin can see konsultasi based on their level
+        switch($adminLevel) {
+            case 4: // ADM - can see all
+                break;
+            case 3: // ADMIN_DPP - can see DPP and GENERAL
+                $query->whereIn('TUJUAN', ['DPP', 'GENERAL']);
+                break;
+            case 2: // ADMIN_DPW - can see DPW, DPP, and GENERAL
+                $query->whereIn('TUJUAN', ['DPW', 'DPP', 'GENERAL']);
+                break;
+            case 1: // ADMIN_DPD - can see DPD, DPW, DPP, and GENERAL
+                $query->whereIn('TUJUAN', ['DPD', 'DPW', 'DPP', 'GENERAL']);
+                break;
+            default:
+                // No admin access, return empty
+                $query->where('ID', 0);
         }
+        
+        return $query;
+    }
+    
+    /**
+     * Check if user can access specific konsultasi
+     */
+    private function canAccessKonsultasi($user, Konsultasi $konsultasi): bool
+    {
+        // User can access their own konsultasi
+        if ($user->nik === $konsultasi->N_NIK) {
+            return true;
+        }
+        
+        // Admin can access based on their level and konsultasi target
+        if ($this->isAdmin($user)) {
+            $adminLevel = $this->getAdminLevel($user);
+            
+            return match($adminLevel) {
+                4 => true, // ADM can access all
+                3 => in_array($konsultasi->TUJUAN, ['DPP', 'GENERAL']),
+                2 => in_array($konsultasi->TUJUAN, ['DPW', 'DPP', 'GENERAL']),
+                1 => in_array($konsultasi->TUJUAN, ['DPD', 'DPW', 'DPP', 'GENERAL']),
+                default => false
+            };
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if user can comment on konsultasi
+     */
+    private function canCommentOnKonsultasi($user, Konsultasi $konsultasi): bool
+    {
+        // Konsultasi must not be closed
+        if ($konsultasi->STATUS === 'CLOSED') {
+            return false;
+        }
+        
+        // User can comment on their own konsultasi
+        if ($user->nik === $konsultasi->N_NIK) {
+            return true;
+        }
+        
+        // Admin can comment if they can access the konsultasi
+        return $this->canAccessKonsultasi($user, $konsultasi);
     }
 }

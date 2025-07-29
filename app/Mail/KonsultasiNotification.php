@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Konsultasi;
 
-class KonsultasiNotification extends Mailable
+class KonsultasiNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -94,9 +94,30 @@ class KonsultasiNotification extends Mailable
 
     /**
      * Get the attachments for the message.
+     *
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
     public function attachments(): array
     {
         return [];
+    }
+
+    /**
+     * Build the message.
+     *
+     * @return $this
+     */
+    public function build()
+    {
+        return $this->view('emails.konsultasi-notification')
+                    ->subject($this->envelope()->subject)
+                    ->with([
+                        'konsultasi' => $this->konsultasi,
+                        'actionType' => $this->actionType,
+                        'actionText' => $this->getActionText(),
+                        'actionColor' => $this->getActionColor(),
+                        'karyawan' => $this->konsultasi->karyawan,
+                        'viewUrl' => route('konsultasi.show', $this->konsultasi->ID),
+                    ]);
     }
 }
