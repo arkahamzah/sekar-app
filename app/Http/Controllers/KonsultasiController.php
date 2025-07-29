@@ -18,16 +18,25 @@ use Illuminate\Support\Facades\Cache;
 class KonsultasiController extends Controller
 {
     /**
-     * Display user's advokasi & aspirasi
+     * Display konsultasi data based on user role
      */
     public function index()
     {
         $user = Auth::user();
         
-        $konsultasi = Konsultasi::where('N_NIK', $user->nik)
-                                ->with(['karyawan'])
-                                ->orderBy('CREATED_AT', 'desc')
-                                ->get();
+        // Check if user is admin
+        if ($this->isAdmin($user)) {
+            // Admin can see all konsultasi
+            $konsultasi = Konsultasi::with(['karyawan', 'komentar'])
+                                    ->orderBy('CREATED_AT', 'desc')
+                                    ->get();
+        } else {
+            // Regular user only sees their own konsultasi
+            $konsultasi = Konsultasi::where('N_NIK', $user->nik)
+                                    ->with(['karyawan', 'komentar'])
+                                    ->orderBy('CREATED_AT', 'desc')
+                                    ->get();
+        }
         
         return view('konsultasi.index', compact('konsultasi'));
     }
@@ -94,10 +103,16 @@ class KonsultasiController extends Controller
     {
         $user = Auth::user();
         
-        $konsultasi = Konsultasi::where('ID', $id)
-                                ->where('N_NIK', $user->nik)
-                                ->with(['karyawan', 'komentar.karyawan'])
-                                ->firstOrFail();
+        // Build base query
+        $query = Konsultasi::where('ID', $id)
+                          ->with(['karyawan', 'komentar.karyawan']);
+        
+        // If not admin, only show own konsultasi
+        if (!$this->isAdmin($user)) {
+            $query->where('N_NIK', $user->nik);
+        }
+        
+        $konsultasi = $query->firstOrFail();
         
         return view('konsultasi.show', compact('konsultasi'));
     }
@@ -115,11 +130,20 @@ class KonsultasiController extends Controller
         
         try {
             DB::transaction(function () use ($validated, $id, $user) {
-                // Verify ownership
-                $konsultasi = $this->verifyKonsultasiOwnership($id, $user->nik);
+                // Get konsultasi (admin can comment on any, user only on their own)
+                $query = Konsultasi::where('ID', $id);
+                
+                if (!$this->isAdmin($user)) {
+                    $query->where('N_NIK', $user->nik);
+                }
+                
+                $konsultasi = $query->firstOrFail();
+                
+                // Determine role for comment
+                $role = $this->isAdmin($user) ? 'ADMIN' : 'USER';
                 
                 // Create comment
-                $this->createKomentar($id, $user->nik, $validated['komentar']);
+                $this->createKomentar($id, $user->nik, $validated['komentar'], $role);
                 
                 // Update status if needed
                 $this->updateKonsultasiStatus($konsultasi, $user->nik);
@@ -333,16 +357,6 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Verify konsultasi ownership
-     */
-    private function verifyKonsultasiOwnership($id, string $nik): Konsultasi
-    {
-        return Konsultasi::where('ID', $id)
-                         ->where('N_NIK', $nik)
-                         ->firstOrFail();
-    }
-    
-    /**
      * Create comment
      */
     private function createKomentar($konsultasiId, string $nik, string $komentar, string $role = 'USER'): KonsultasiKomentar
@@ -385,7 +399,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Send email notification to relevant admins (FINAL - SINGLE EMAIL VERSION)
+     * Send email notification to relevant admins
      */
     private function sendEmailNotification(Konsultasi $konsultasi, string $actionType): void
     {
@@ -432,116 +446,5 @@ class KonsultasiController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
         }
-    }
-    
-    /**
-     * Get relevant admin emails based on konsultasi target (BACKUP - NOT USED)
-     */
-    private function getRelevantAdminEmails(Konsultasi $konsultasi): array
-    {
-        $karyawan = $konsultasi->karyawan;
-        if (!$karyawan) {
-            return $this->getFallbackAdminEmails();
-        }
-        
-        $emails = [];
-        
-        // Get admin emails based on target level
-        switch ($konsultasi->TUJUAN) {
-            case 'DPD':
-                $emails = $this->getDpdAdminEmails($karyawan->V_KOTA_GEDUNG);
-                break;
-                
-            case 'DPW':
-                $emails = $this->getDpwAdminEmails($karyawan->V_KOTA_GEDUNG);
-                break;
-                
-            case 'DPP':
-                $emails = $this->getDppAdminEmails();
-                break;
-                
-            case 'GENERAL':
-            default:
-                // Get DPD and DPW admins for general inquiries
-                $emails = array_merge(
-                    $this->getDpdAdminEmails($karyawan->V_KOTA_GEDUNG),
-                    $this->getDpwAdminEmails($karyawan->V_KOTA_GEDUNG)
-                );
-                break;
-        }
-        
-        // If no specific admins found, get fallback admins
-        if (empty($emails)) {
-            $emails = $this->getFallbackAdminEmails();
-        }
-        
-        return $emails;
-    }
-    
-    /**
-     * Get DPD admin emails (BACKUP - NOT USED)
-     */
-    private function getDpdAdminEmails(string $kota): array
-    {
-        return DB::table('users')
-            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
-            ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
-            ->join('t_karyawan', 't_sekar_pengurus.N_NIK', '=', 't_karyawan.N_NIK')
-            ->where('t_sekar_roles.NAME', 'ADMIN_DPD')
-            ->where('t_karyawan.V_KOTA_GEDUNG', $kota)
-            ->whereNotNull('users.email')
-            ->where('users.email', '!=', '')
-            ->pluck('users.email')
-            ->toArray();
-    }
-    
-    /**
-     * Get DPW admin emails (BACKUP - NOT USED)
-     */
-    private function getDpwAdminEmails(string $kota): array
-    {
-        // Map city to DPW
-        $dpwMapping = $this->getDpwMapping();
-        $dpw = $dpwMapping[$kota] ?? 'DPW Jabar';
-        
-        return DB::table('users')
-            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
-            ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
-            ->where('t_sekar_roles.NAME', 'ADMIN_DPW')
-            ->where('t_sekar_pengurus.DPW', $dpw)
-            ->whereNotNull('users.email')
-            ->where('users.email', '!=', '')
-            ->pluck('users.email')
-            ->toArray();
-    }
-    
-    /**
-     * Get DPP admin emails (BACKUP - NOT USED)
-     */
-    private function getDppAdminEmails(): array
-    {
-        return DB::table('users')
-            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
-            ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
-            ->where('t_sekar_roles.NAME', 'ADMIN_DPP')
-            ->whereNotNull('users.email')
-            ->where('users.email', '!=', '')
-            ->pluck('users.email')
-            ->toArray();
-    }
-    
-    /**
-     * Get fallback admin emails when no specific admins found (BACKUP - NOT USED)
-     */
-    private function getFallbackAdminEmails(): array
-    {
-        return DB::table('users')
-            ->join('t_sekar_pengurus', 'users.nik', '=', 't_sekar_pengurus.N_NIK')
-            ->join('t_sekar_roles', 't_sekar_pengurus.ID_ROLES', '=', 't_sekar_roles.ID')
-            ->where('t_sekar_roles.NAME', 'ADM') // Super admin
-            ->whereNotNull('users.email')
-            ->where('users.email', '!=', '')
-            ->pluck('users.email')
-            ->toArray();
     }
 }

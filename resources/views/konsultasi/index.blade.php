@@ -20,19 +20,109 @@
         <!-- Header -->
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Advokasi & Aspirasi</h1>
-                <p class="text-gray-600 text-sm mt-1">Kelola pengajuan advokasi dan aspirasi Anda</p>
+                <h1 class="text-2xl font-bold text-gray-900">
+                    @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                        Semua Advokasi & Aspirasi (Admin)
+                    @else
+                        Advokasi & Aspirasi Saya
+                    @endif
+                </h1>
+                <p class="text-gray-600 text-sm mt-1">
+                    @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                        Kelola semua pengajuan advokasi dan aspirasi anggota SEKAR
+                    @else
+                        Kelola pengajuan advokasi dan aspirasi Anda
+                    @endif
+                </p>
             </div>
-            <a href="{{ route('konsultasi.create') }}" 
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Buat Baru
-            </a>
+            <div class="flex space-x-3">
+                @if(!auth()->user()->pengurus || !auth()->user()->pengurus->role || !in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                <a href="{{ route('konsultasi.create') }}" 
+                   class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Buat Baru
+                </a>
+                @endif
+            </div>
         </div>
 
-        <!-- Statistics Cards -->
+        <!-- Admin Statistics -->
+        @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Total</p>
+                        <p class="text-xl font-bold text-gray-900">{{ $konsultasi->count() }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Menunggu</p>
+                        <p class="text-xl font-bold text-gray-900">{{ $konsultasi->where('STATUS', 'OPEN')->count() }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Diproses</p>
+                        <p class="text-xl font-bold text-gray-900">{{ $konsultasi->where('STATUS', 'IN_PROGRESS')->count() }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Selesai</p>
+                        <p class="text-xl font-bold text-gray-900">{{ $konsultasi->where('STATUS', 'CLOSED')->count() }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-600">Advokasi</p>
+                        <p class="text-xl font-bold text-gray-900">{{ $konsultasi->where('JENIS', 'ADVOKASI')->count() }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @else
+        <!-- Regular User Statistics -->
         @if($konsultasi->count() > 0)
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -92,6 +182,7 @@
             </div>
         </div>
         @endif
+        @endif
 
         <!-- Filter Tabs -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
@@ -117,6 +208,18 @@
                             data-status="CLOSED">
                         Selesai
                     </button>
+                    @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                    <button onclick="filterByJenis('ADVOKASI')" 
+                            class="filter-tab border-b-2 py-4 px-1 text-sm font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" 
+                            data-jenis="ADVOKASI">
+                        Advokasi
+                    </button>
+                    <button onclick="filterByJenis('ASPIRASI')" 
+                            class="filter-tab border-b-2 py-4 px-1 text-sm font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" 
+                            data-jenis="ASPIRASI">
+                        Aspirasi
+                    </button>
+                    @endif
                 </nav>
             </div>
 
@@ -130,7 +233,7 @@
                     </div>
                     <input type="text" 
                            id="searchInput"
-                           placeholder="Cari berdasarkan judul atau deskripsi..." 
+                           placeholder="Cari berdasarkan judul, deskripsi, atau nama anggota..." 
                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                            onkeyup="searchKonsultasi()">
                 </div>
@@ -143,8 +246,10 @@
                 @forelse($konsultasi as $item)
                 <div class="konsultasi-item border-b border-gray-200 last:border-b-0 p-6 hover:bg-gray-50 transition" 
                      data-status="{{ $item->STATUS }}"
+                     data-jenis="{{ $item->JENIS }}"
                      data-title="{{ strtolower($item->JUDUL) }}"
-                     data-description="{{ strtolower($item->DESKRIPSI) }}">
+                     data-description="{{ strtolower($item->DESKRIPSI) }}"
+                     data-nama="{{ $item->karyawan ? strtolower($item->karyawan->V_NAMA_KARYAWAN) : '' }}">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex-1">
                             <div class="flex items-center space-x-3 mb-2">
@@ -166,6 +271,23 @@
                             </div>
                             <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ $item->JUDUL }}</h3>
                             <p class="text-gray-600 text-sm mb-2">{{ Str::limit($item->DESKRIPSI, 150) }}</p>
+                            
+                            <!-- Admin: Show member info -->
+                            @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                                @if($item->karyawan)
+                                <div class="flex items-center text-xs text-blue-600 mb-2 bg-blue-50 p-2 rounded">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    <strong>{{ $item->karyawan->V_NAMA_KARYAWAN }}</strong>
+                                    <span class="mx-2">•</span>
+                                    <span>NIK: {{ $item->N_NIK }}</span>
+                                    <span class="mx-2">•</span>
+                                    <span>{{ $item->karyawan->V_SHORT_UNIT }} - {{ $item->karyawan->V_KOTA_GEDUNG }}</span>
+                                </div>
+                                @endif
+                            @endif
+                            
                             <div class="flex items-center text-xs text-gray-500 space-x-4">
                                 <span class="flex items-center">
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,6 +321,20 @@
                             @else
                                 <span class="text-xs text-gray-500">● Ditutup</span>
                             @endif
+                            
+                            <!-- Priority indicator for admin -->
+                            @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                                @if($item->JENIS === 'ADVOKASI' && $item->STATUS !== 'CLOSED')
+                                    <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
+                                        ⚠️ Prioritas Tinggi
+                                    </span>
+                                @endif
+                                @if($item->CREATED_AT->diffInDays(now()) > 7 && $item->STATUS !== 'CLOSED')
+                                    <span class="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium">
+                                        📅 {{ $item->CREATED_AT->diffInDays(now()) }} hari
+                                    </span>
+                                @endif
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -207,12 +343,26 @@
                     <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                     </svg>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada advokasi & aspirasi</h3>
-                    <p class="text-gray-600 mb-4">Mulai dengan membuat advokasi atau aspirasi pertama Anda.</p>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">
+                        @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                            Belum ada advokasi & aspirasi
+                        @else
+                            Belum ada advokasi & aspirasi
+                        @endif
+                    </h3>
+                    <p class="text-gray-600 mb-4">
+                        @if(auth()->user()->pengurus && auth()->user()->pengurus->role && in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
+                            Belum ada anggota yang mengajukan advokasi atau aspirasi.
+                        @else
+                            Mulai dengan membuat advokasi atau aspirasi pertama Anda.
+                        @endif
+                    </p>
+                    @if(!auth()->user()->pengurus || !auth()->user()->pengurus->role || !in_array(auth()->user()->pengurus->role->NAME, ['ADM', 'ADMIN_DPP', 'ADMIN_DPW', 'ADMIN_DPD']))
                     <a href="{{ route('konsultasi.create') }}" 
                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
                         Buat Advokasi/Aspirasi
                     </a>
+                    @endif
                 </div>
                 @endforelse
             </div>
@@ -269,6 +419,40 @@ function filterByStatus(status) {
     document.getElementById('searchInput').value = '';
 }
 
+function filterByJenis(jenis) {
+    const items = document.querySelectorAll('.konsultasi-item');
+    const tabs = document.querySelectorAll('.filter-tab');
+    
+    // Update tab styles
+    tabs.forEach(tab => {
+        tab.classList.remove('border-blue-500', 'text-blue-600');
+        tab.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    const activeTab = document.querySelector(`[data-jenis="${jenis}"]`);
+    if (activeTab) {
+        activeTab.classList.remove('border-transparent', 'text-gray-500');
+        activeTab.classList.add('border-blue-500', 'text-blue-600');
+    }
+    
+    // Filter items
+    let visibleCount = 0;
+    items.forEach(item => {
+        if (item.dataset.jenis === jenis) {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Show/hide no results message
+    toggleNoResults(visibleCount === 0);
+    
+    // Clear search when filtering
+    document.getElementById('searchInput').value = '';
+}
+
 function searchKonsultasi() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const items = document.querySelectorAll('.konsultasi-item');
@@ -277,8 +461,9 @@ function searchKonsultasi() {
     items.forEach(item => {
         const title = item.dataset.title;
         const description = item.dataset.description;
+        const nama = item.dataset.nama;
         
-        if (title.includes(searchTerm) || description.includes(searchTerm)) {
+        if (title.includes(searchTerm) || description.includes(searchTerm) || nama.includes(searchTerm)) {
             item.style.display = 'block';
             visibleCount++;
         } else {
