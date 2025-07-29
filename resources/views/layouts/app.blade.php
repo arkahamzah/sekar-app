@@ -122,6 +122,22 @@
             height: 1px;
             background: linear-gradient(90deg, transparent 0%, #e5e7eb 20%, #e5e7eb 80%, transparent 100%);
         }
+        /* Alert animations */
+        #successAlert {
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -183,11 +199,11 @@
                                 </a>
 
                                 <!-- Password Reset Link -->
-                                <a href="{{ route('password.request') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                <a href="{{ route('password.change') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                     <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2a2 2 0 00-2 2m2-2a2 2 0 01-2-2m0 0a2 2 0 012-2m0 0a2 2 0 00-2 2M3 12l1.5 1.5L9 9"></path>
                                     </svg>
-                                    <span>Reset Password</span>
+                                    <span>Ubah Password</span>
                                 </a>
                             </div>
                             
@@ -332,74 +348,113 @@
 
     <!-- Main Content -->
     <main class="{{ Auth::check() ? 'ml-64 pt-14 min-h-screen' : 'min-h-screen' }}">
+        <!-- Success Message Global -->
+        @if(session('success'))
+        <div id="successAlert" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 mx-4 mt-4 rounded-lg relative">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="font-medium">{{ session('success') }}</span>
+                <button onclick="closeAlert('successAlert')" class="ml-auto text-green-600 hover:text-green-800">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        @endif
         @yield('content')
     </main>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const userMenuButton = document.getElementById('userMenuButton');
-        const userDropdown = document.getElementById('userDropdown');
-        const userMenuChevron = document.getElementById('userMenuChevron');
-        const header = document.querySelector('header');
-        
-        // Header scroll effect
-        let lastScrollTop = 0;
-        window.addEventListener('scroll', function() {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        document.addEventListener('DOMContentLoaded', function() {
+            const userMenuButton = document.getElementById('userMenuButton');
+            const userDropdown = document.getElementById('userDropdown');
+            const userMenuChevron = document.getElementById('userMenuChevron');
+            const header = document.querySelector('header');
             
-            // Add shadow when scrolled
-            if (scrollTop > 0) {
-                header.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
-            } else {
-                header.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-            }
-            
-            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-        });
-        
-        // User dropdown functionality
-        if (userMenuButton && userDropdown) {
-            let isOpen = false;
-            
-            userMenuButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                toggleDropdown();
-            });
-            
-            function toggleDropdown() {
-                if (isOpen) {
-                    closeDropdown();
-                } else {
-                    openDropdown();
-                }
-            }
-            
-            function openDropdown() {
-                userDropdown.classList.remove('hidden');
-                userMenuChevron.style.transform = 'rotate(180deg)';
-                isOpen = true;
+            // Header scroll effect
+            let lastScrollTop = 0;
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                 
-                // Close on outside click
-                setTimeout(() => {
-                    document.addEventListener('click', closeDropdown);
-                }, 10);
-            }
+                // Add shadow when scrolled
+                if (scrollTop > 0) {
+                    header.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+                } else {
+                    header.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            });
             
-            function closeDropdown() {
-                userDropdown.classList.add('hidden');
-                userMenuChevron.style.transform = 'rotate(0deg)';
-                isOpen = false;
-                document.removeEventListener('click', closeDropdown);
+            // User dropdown functionality
+            if (userMenuButton && userDropdown) {
+                let isOpen = false;
+                
+                userMenuButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleDropdown();
+                });
+                
+                function toggleDropdown() {
+                    if (isOpen) {
+                        closeDropdown();
+                    } else {
+                        openDropdown();
+                    }
+                }
+                
+                function openDropdown() {
+                    userDropdown.classList.remove('hidden');
+                    userMenuChevron.style.transform = 'rotate(180deg)';
+                    isOpen = true;
+                    
+                    // Close on outside click
+                    setTimeout(() => {
+                        document.addEventListener('click', closeDropdown);
+                    }, 10);
+                }
+                
+                function closeDropdown() {
+                    userDropdown.classList.add('hidden');
+                    userMenuChevron.style.transform = 'rotate(0deg)';
+                    isOpen = false;
+                    document.removeEventListener('click', closeDropdown);
+                }
+                
+                // Close on escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && isOpen) {
+                        closeDropdown();
+                    }
+                });
             }
-            
-            // Close on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && isOpen) {
-                    closeDropdown();
+
+            // Auto hide alerts after 5 seconds - GABUNG DI SINI
+            const alerts = ['successAlert'];
+            alerts.forEach(alertId => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    setTimeout(() => {
+                        closeAlert(alertId);
+                    }, 5000);
                 }
             });
+        }); // TUTUP DOMContentLoaded dengan benar
+
+        // Alert close function - DI LUAR DOMContentLoaded
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    alert.remove();
+                }, 300);
+            }
         }
-    });
-    </script>
+        </script>
 </body>
 </html>

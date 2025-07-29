@@ -20,7 +20,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.post');
     
-    // Password Reset Routes
+    // Password Reset Routes (for non-authenticated users)
     Route::prefix('password')->name('password.')->group(function () {
         Route::get('/reset', [PasswordResetController::class, 'showRequestForm'])->name('request');
         Route::post('/email', [PasswordResetController::class, 'sendResetLink'])->name('email');
@@ -41,6 +41,12 @@ Route::middleware('auth')->group(function () {
     // Profile Routes (accessible from user dropdown)
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::post('/profile/update-iuran', [ProfileController::class, 'updateIuranSukarela'])->name('profile.update-iuran');
+    
+    // Password Change Routes (for authenticated users)
+    Route::prefix('password')->name('password.')->group(function () {
+        Route::get('/change', [PasswordResetController::class, 'showChangeForm'])->name('change');
+        Route::post('/change', [PasswordResetController::class, 'changePassword'])->name('change.update');
+    });
     
     // Data Anggota Routes
     Route::get('/data-anggota', [DataAnggotaController::class, 'index'])->name('data-anggota.index');

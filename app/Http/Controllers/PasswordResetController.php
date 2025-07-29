@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -159,6 +160,73 @@ class PasswordResetController extends Controller
             ]);
 
             return back()->withInput()->withErrors(['password_portal' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Show change password form for authenticated users
+     */
+    public function showChangeForm()
+    {
+        $user = Auth::user();
+        $karyawan = $user->karyawan;
+        
+        return view('auth.passwords.change', compact('user', 'karyawan'));
+    }
+
+    /**
+     * Change password for authenticated users
+     */
+    public function changePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+            'new_password_confirmation' => 'required|string|same:new_password',
+        ], [
+            'current_password.required' => 'Password saat ini wajib diisi.',
+            'new_password.required' => 'Password baru wajib diisi.',
+            'new_password.min' => 'Password baru minimal 6 karakter.',
+            'new_password_confirmation.required' => 'Konfirmasi password baru wajib diisi.',
+            'new_password_confirmation.same' => 'Konfirmasi password baru tidak sesuai.',
+        ]);
+
+        $user = Auth::user();
+
+        try {
+            DB::transaction(function () use ($user, $validated) {
+                // Verify current password
+                if (!Hash::check($validated['current_password'], $user->password)) {
+                    throw new \Exception('Password saat ini tidak benar.');
+                }
+
+                // Validate new password with portal (if API available)
+                if (!$this->validatePortalPassword($user->nik, $validated['new_password'])) {
+                    throw new \Exception('Password baru harus sama dengan password portal Anda.');
+                }
+
+                // Update user password
+                $user->update([
+                    'password' => Hash::make($validated['new_password'])
+                ]);
+
+                Log::info('Password changed successfully', [
+                    'nik' => $user->nik,
+                    'user_id' => $user->id,
+                    'timestamp' => now()
+                ]);
+            });
+
+            return redirect()->route('dashboard')->with('success', 'Password berhasil diubah.');
+
+        } catch (\Exception $e) {
+            Log::error('Password change failed', [
+                'nik' => $user->nik,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors(['current_password' => $e->getMessage()]);
         }
     }
 
