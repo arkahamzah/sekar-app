@@ -6,7 +6,7 @@ use App\Models\Konsultasi;
 use App\Models\KonsultasiKomentar;
 use App\Models\Karyawan;
 use App\Mail\KonsultasiNotification;
-use App\Jobs\SendKonsultasiNotificationJob; // ✅ TAMBAH IMPORT INI
+use App\Jobs\SendKonsultasiNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
