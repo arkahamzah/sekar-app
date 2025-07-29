@@ -34,13 +34,16 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware('auth')->group(function () {
-    Route::post('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.update-email');
-
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Profile Routes (accessible from user dropdown)
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::post('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.update-email');
     Route::post('/profile/update-iuran', [ProfileController::class, 'updateIuranSukarela'])->name('profile.update-iuran');
+    
+    // Profile Picture Routes
+    Route::post('/profile/update-picture', [ProfileController::class, 'updateProfilePicture'])->name('profile.update-picture');
+    Route::delete('/profile/delete-picture', [ProfileController::class, 'deleteProfilePicture'])->name('profile.delete-picture');
     
     // Password Change Routes (for authenticated users)
     Route::prefix('password')->name('password.')->group(function () {

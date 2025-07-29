@@ -12,9 +12,10 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'nik', 
         'email',
         'password',
-        'nik'
+        'profile_picture'
     ];
 
     protected $hidden = [
