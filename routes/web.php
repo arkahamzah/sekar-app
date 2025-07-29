@@ -34,6 +34,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware('auth')->group(function () {
+    // Profile Routes
+    Route::post('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.update-email');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Profile Routes (accessible from user dropdown)
@@ -55,15 +57,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/data-anggota', [DataAnggotaController::class, 'index'])->name('data-anggota.index');
     Route::get('/data-anggota/export', [DataAnggotaController::class, 'export'])->name('data-anggota.export');
     
-    // Advokasi & Aspirasi Routes (Enhanced)
+    // Advokasi & Aspirasi Routes (Enhanced with Escalation)
     Route::prefix('advokasi-aspirasi')->name('konsultasi.')->group(function () {
+        // Basic konsultasi routes
         Route::get('/', [KonsultasiController::class, 'index'])->name('index');
         Route::get('/create', [KonsultasiController::class, 'create'])->name('create');
         Route::post('/', [KonsultasiController::class, 'store'])->name('store');
         Route::get('/{id}', [KonsultasiController::class, 'show'])->name('show');
-        Route::post('/{id}/comment', [KonsultasiController::class, 'addComment'])->name('comment');
         
-        // Admin only routes
+        // Comment routes (accessible by konsultasi owner and admins)
+        Route::post('/{id}/comment', [KonsultasiController::class, 'comment'])->name('comment');
+        
+        // Admin only routes with middleware check
         Route::middleware('check.admin')->group(function () {
             Route::post('/{id}/close', [KonsultasiController::class, 'close'])->name('close');
             Route::post('/{id}/escalate', [KonsultasiController::class, 'escalate'])->name('escalate');
@@ -78,7 +83,26 @@ Route::middleware('auth')->group(function () {
     Route::get('/sertifikat', [SertifikatController::class, 'show'])->name('sertifikat.show');
     Route::get('/sertifikat/download', [SertifikatController::class, 'download'])->name('sertifikat.download');
     
-    // Setting Routes (Admin check will be done in controller)
-    Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
-    Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
+    // Setting Routes (Admin check will be done in controller and middleware)
+    Route::middleware('check.admin')->group(function () {
+        Route::get('/setting', [SettingController::class, 'index'])->name('setting.index');
+        Route::post('/setting', [SettingController::class, 'update'])->name('setting.update');
+    });
+});
+
+// Additional API-style routes for AJAX calls (if needed in the future)
+Route::middleware(['auth', 'check.admin'])->prefix('api')->name('api.')->group(function () {
+    // Get escalation options for a specific konsultasi
+    Route::get('/konsultasi/{id}/escalation-options', [KonsultasiController::class, 'getEscalationOptions'])->name('konsultasi.escalation-options');
+    
+    // Get konsultasi statistics for dashboard
+    Route::get('/konsultasi/stats', [KonsultasiController::class, 'getStats'])->name('konsultasi.stats');
+    
+    // Bulk actions for konsultasi (future enhancement)
+    Route::post('/konsultasi/bulk-action', [KonsultasiController::class, 'bulkAction'])->name('konsultasi.bulk-action');
+});
+
+// Fallback route for 404 handling
+Route::fallback(function () {
+    return response()->view('errors.404', [], 404);
 });
