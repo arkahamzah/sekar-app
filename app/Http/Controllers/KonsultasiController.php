@@ -6,6 +6,7 @@ use App\Models\Konsultasi;
 use App\Models\KonsultasiKomentar;
 use App\Models\Karyawan;
 use App\Mail\KonsultasiNotification;
+use App\Jobs\SendKonsultasiNotificationJob; // ✅ TAMBAH IMPORT INI
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +65,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Show the form for creating a new konsultasi - FIXED
+     * Show the form for creating a new konsultasi
      */
     public function create()
     {
@@ -74,7 +75,6 @@ class KonsultasiController extends Controller
         $availableTargets = $this->getAvailableTargets($karyawan);
         $kategoriAdvokasi = $this->getKategoriAdvokasi();
         
-        // Pass semua variabel yang diperlukan ke view termasuk $karyawan
         return view('konsultasi.create', compact('karyawan', 'availableTargets', 'kategoriAdvokasi'));
     }
     
@@ -98,7 +98,7 @@ class KonsultasiController extends Controller
             DB::transaction(function () use ($validated, $user) {
                 $konsultasi = $this->createKonsultasi($user, $validated);
                 
-                // Send email notification
+                // Send email notification - PERBAIKAN
                 $this->sendEmailNotification($konsultasi, 'new');
             });
             
@@ -107,7 +107,8 @@ class KonsultasiController extends Controller
         } catch (\Exception $e) {
             Log::error('Error creating konsultasi: ' . $e->getMessage(), [
                 'user_nik' => $user->nik,
-                'validated_data' => $validated
+                'validated_data' => $validated,
+                'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()->back()
@@ -134,7 +135,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Add comment to konsultasi (Updated method name from addComment)
+     * Add comment to konsultasi
      */
     public function comment(Request $request, $id)
     {
@@ -166,7 +167,7 @@ class KonsultasiController extends Controller
                     ]);
                 }
                 
-                // Send email notification
+                // Send email notification - PERBAIKAN
                 $this->sendEmailNotification($konsultasi, 'comment');
             });
             
@@ -214,7 +215,7 @@ class KonsultasiController extends Controller
                     'ADMIN'
                 );
                 
-                // Send email notification
+                // Send email notification - PERBAIKAN
                 $this->sendEmailNotification($konsultasi, 'closed');
             });
             
@@ -222,7 +223,8 @@ class KonsultasiController extends Controller
         } catch (\Exception $e) {
             Log::error('Error closing konsultasi: ' . $e->getMessage(), [
                 'user_nik' => $user->nik,
-                'konsultasi_id' => $id
+                'konsultasi_id' => $id,
+                'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menutup konsultasi.');
@@ -230,7 +232,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Escalate konsultasi to higher level (admin only) - UPDATED WITH PROPER VALIDATION
+     * Escalate konsultasi to higher level (admin only)
      */
     public function escalate(Request $request, $id)
     {
@@ -276,7 +278,7 @@ class KonsultasiController extends Controller
                     'ADMIN'
                 );
                 
-                // Send email notification
+                // Send email notification - PERBAIKAN
                 $this->sendEmailNotification($konsultasi, 'escalate');
             });
             
@@ -285,7 +287,8 @@ class KonsultasiController extends Controller
             Log::error('Error escalating konsultasi: ' . $e->getMessage(), [
                 'user_nik' => $user->nik,
                 'konsultasi_id' => $id,
-                'escalate_to' => $validated['escalate_to'] ?? null
+                'escalate_to' => $validated['escalate_to'] ?? null,
+                'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()->back()->with('error', 'Terjadi kesalahan saat melakukan eskalasi.');
@@ -374,7 +377,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Get valid escalation targets based on current level - FIXED METHOD
+     * Get valid escalation targets based on current level
      */
     private function getValidEscalationTargets(string $currentLevel): array
     {
@@ -515,7 +518,7 @@ class KonsultasiController extends Controller
     }
     
     /**
-     * Create new comment record - UPDATED FOR CORRECT TABLE
+     * Create new comment record
      */
     private function createKomentar($konsultasiId, $nik, $komentar, $jenisKomentar): KonsultasiKomentar
     {
@@ -523,63 +526,198 @@ class KonsultasiController extends Controller
             'ID_KONSULTASI' => $konsultasiId,
             'N_NIK' => $nik,
             'KOMENTAR' => $komentar,
-            'PENGIRIM_ROLE' => $jenisKomentar, // Menggunakan nama kolom yang benar
+            'PENGIRIM_ROLE' => $jenisKomentar,
             'CREATED_BY' => $nik,
             'CREATED_AT' => now()
         ]);
     }
     
     /**
-     * Send email notification
+     * Send email notification - DIPERBAIKI DENGAN OPSI JOB DAN DIRECT
      */
     private function sendEmailNotification(Konsultasi $konsultasi, string $actionType): void
     {
+        Log::info('=== STARTING EMAIL NOTIFICATION ===', [
+            'konsultasi_id' => $konsultasi->ID,
+            'action_type' => $actionType,
+            'judul' => $konsultasi->JUDUL
+        ]);
+        
         try {
-            // Determine recipients based on action type and target
+            // Get recipients
             $recipients = $this->getNotificationRecipients($konsultasi, $actionType);
             
-            foreach ($recipients as $email) {
-                Mail::to($email)->send(new KonsultasiNotification($konsultasi, $actionType));
+            if (empty($recipients)) {
+                Log::warning('No email recipients found', [
+                    'konsultasi_id' => $konsultasi->ID,
+                    'action_type' => $actionType
+                ]);
+                return;
             }
             
-            Log::info('Email notifications sent', [
+            Log::info('Recipients found', [
+                'recipients' => $recipients,
+                'count' => count($recipients),
+                'konsultasi_id' => $konsultasi->ID
+            ]);
+            
+            // PILIHAN 1: Gunakan Job (Recommended untuk production)
+            if (config('queue.default') !== 'sync' && class_exists('App\Jobs\SendKonsultasiNotificationJob')) {
+                Log::info('Dispatching email job', [
+                    'queue_connection' => config('queue.default'),
+                    'konsultasi_id' => $konsultasi->ID
+                ]);
+                
+                SendKonsultasiNotificationJob::dispatch($konsultasi, $actionType, $recipients);
+                
+                Log::info('✅ EMAIL JOB DISPATCHED', [
+                    'konsultasi_id' => $konsultasi->ID,
+                    'action_type' => $actionType,
+                    'queue' => config('queue.default')
+                ]);
+            } 
+            // PILIHAN 2: Kirim langsung (Fallback atau untuk development)
+            else {
+                Log::info('Sending emails directly (sync mode)', [
+                    'konsultasi_id' => $konsultasi->ID
+                ]);
+                
+                $successCount = 0;
+                $failCount = 0;
+                
+                foreach ($recipients as $email) {
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        Log::warning('Invalid email format', ['email' => $email]);
+                        $failCount++;
+                        continue;
+                    }
+                    
+                    try {
+                        Mail::to($email)->send(new KonsultasiNotification($konsultasi, $actionType));
+                        $successCount++;
+                        
+                        Log::info('✅ EMAIL SENT DIRECTLY', [
+                            'to' => $email,
+                            'konsultasi_id' => $konsultasi->ID,
+                            'action_type' => $actionType
+                        ]);
+                        
+                        // Small delay to avoid rate limiting
+                        if (count($recipients) > 1) {
+                            usleep(500000); // 0.5 second
+                        }
+                        
+                    } catch (\Exception $e) {
+                        $failCount++;
+                        Log::error('❌ EMAIL SEND FAILED', [
+                            'to' => $email,
+                            'konsultasi_id' => $konsultasi->ID,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                Log::info('=== EMAIL DIRECT SENDING COMPLETED ===', [
+                    'konsultasi_id' => $konsultasi->ID,
+                    'success_count' => $successCount,
+                    'fail_count' => $failCount,
+                    'total_recipients' => count($recipients)
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('=== EMAIL NOTIFICATION FAILED ===', [
                 'konsultasi_id' => $konsultasi->ID,
                 'action_type' => $actionType,
-                'recipients_count' => count($recipients)
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send email notification: ' . $e->getMessage(), [
-                'konsultasi_id' => $konsultasi->ID,
-                'action_type' => $actionType
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }
     
     /**
-     * Get notification recipients
+     * Get notification recipients - DIPERBAIKI
      */
     private function getNotificationRecipients(Konsultasi $konsultasi, string $actionType): array
     {
         $recipients = [];
         
-        // Always notify the konsultasi creator if they have email
-        if ($konsultasi->karyawan && $konsultasi->karyawan->V_EMAIL) {
+        Log::info('Getting email recipients', [
+            'konsultasi_id' => $konsultasi->ID,
+            'konsultasi_nik' => $konsultasi->N_NIK,
+            'action_type' => $actionType
+        ]);
+        
+        // 1. Add creator's email if available
+        if ($konsultasi->karyawan && !empty($konsultasi->karyawan->V_EMAIL)) {
             $recipients[] = $konsultasi->karyawan->V_EMAIL;
+            Log::info('Added creator email', [
+                'email' => $konsultasi->karyawan->V_EMAIL,
+                'konsultasi_id' => $konsultasi->ID
+            ]);
+        } else {
+            Log::warning('Creator email not available', [
+                'has_karyawan' => !is_null($konsultasi->karyawan),
+                'karyawan_email' => $konsultasi->karyawan->V_EMAIL ?? null,
+                'konsultasi_id' => $konsultasi->ID
+            ]);
         }
         
-        // Add admin emails based on target level
+        // 2. Add admin emails based on target level
         $adminEmail = $this->getAdminEmailByTarget($konsultasi->TUJUAN);
         if ($adminEmail && !in_array($adminEmail, $recipients)) {
             $recipients[] = $adminEmail;
+            Log::info('Added target admin email', [
+                'email' => $adminEmail,
+                'target' => $konsultasi->TUJUAN,
+                'konsultasi_id' => $konsultasi->ID
+            ]);
         }
         
-        // Fallback to default admin email
-        $defaultAdminEmail = env('ADMIN_EMAIL', 'admin@sekar.telkom.co.id');
+        // 3. Add fallback admin email
+        $defaultAdminEmail = env('ADMIN_EMAIL');
         if ($defaultAdminEmail && !in_array($defaultAdminEmail, $recipients)) {
             $recipients[] = $defaultAdminEmail;
+            Log::info('Added default admin email', [
+                'email' => $defaultAdminEmail,
+                'konsultasi_id' => $konsultasi->ID
+            ]);
         }
         
-        return array_filter($recipients);
+        // 4. Add test email for development
+        $testEmail = env('MAIL_FROM_ADDRESS', 'arkhamzahs@gmail.com');
+        if ($testEmail && !in_array($testEmail, $recipients)) {
+            $recipients[] = $testEmail;
+            Log::info('Added test email', [
+                'email' => $testEmail,
+                'konsultasi_id' => $konsultasi->ID
+            ]);
+        }
+        
+        // 5. Filter and validate emails
+        $validRecipients = [];
+        foreach ($recipients as $email) {
+            if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $validRecipients[] = $email;
+            } else {
+                Log::warning('Invalid email filtered out', [
+                    'email' => $email,
+                    'konsultasi_id' => $konsultasi->ID
+                ]);
+            }
+        }
+        
+        $finalRecipients = array_unique($validRecipients);
+        
+        Log::info('Final recipients prepared', [
+            'recipients' => $finalRecipients,
+            'count' => count($finalRecipients),
+            'konsultasi_id' => $konsultasi->ID
+        ]);
+        
+        return $finalRecipients;
     }
     
     /**
@@ -587,14 +725,12 @@ class KonsultasiController extends Controller
      */
     private function getAdminEmailByTarget(string $target): ?string
     {
-        // This should be implemented based on your admin structure
-        // For now, returning environment-based emails
         return match($target) {
             'DPD' => env('DPD_ADMIN_EMAIL'),
             'DPW' => env('DPW_ADMIN_EMAIL'),
             'DPP' => env('DPP_ADMIN_EMAIL'),
             'GENERAL' => env('GENERAL_ADMIN_EMAIL'),
-            default => env('ADMIN_EMAIL', 'admin@sekar.telkom.co.id')
+            default => env('ADMIN_EMAIL', 'arkhamzahs@gmail.com')
         };
     }
     
